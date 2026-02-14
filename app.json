@@ -1,7 +1,53 @@
 {
   "expo": {
     "name": "Veto",
-    "slug": "Veto",
-    "version": "1.0.0"
+    "slug": "veto",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#2C3E50"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.kacicalvaresi.veto",
+      "buildNumber": "1",
+      "infoPlist": {
+        "NSUserTrackingUsageDescription": "This app does not track you. This permission is not used.",
+        "ITSAppUsesNonExemptEncryption": false
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#2C3E50"
+      },
+      "package": "com.kacicalvaresi.veto",
+      "versionCode": 1,
+      "permissions": [
+        "READ_PHONE_STATE",
+        "CALL_PHONE"
+      ]
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "./plugins/withCallDirectory",
+      "./plugins/withCallScreeningService",
+      "./plugins/withAppGroup",
+      "./plugins/withSMSFilter",
+      "./plugins/withActionExtension"
+    ],
+    "scheme": "veto",
+    "description": "Block spam calls with zero data collection. Privacy-first spam call blocker that keeps all your data on your device.",
+    "privacy": "public",
+    "primaryColor": "#4A90E2"
   }
 }
