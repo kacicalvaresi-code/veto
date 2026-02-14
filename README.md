@@ -21,7 +21,7 @@ Veto is a privacy-first spam call blocker for iOS and Android that blocks spam c
 **Build Status:** ✅ **CLEAN BUILD SUCCESSFUL**  
 **Overall Completion:** ~40%
 
-This is a fresh React Native build using Expo SDK 49 (bare workflow). All dependency conflicts from previous sessions have been resolved.
+This is a fresh React Native build using Expo SDK 50 (bare workflow). All dependency conflicts from previous sessions have been resolved.
 
 ### What's Complete
 
@@ -45,8 +45,8 @@ See `BUILD_STATUS_AND_NEXT_STEPS.md` for detailed status and next steps.
 
 ## Tech Stack
 
-- **Framework:** React Native 0.72.10
-- **SDK:** Expo 49.0.0
+- **Framework:** React Native 0.73.6
+- **SDK:** Expo 50.0.0
 - **Navigation:** React Navigation 6
 - **Database:** Expo SQLite
 - **Backend:** Node.js/Express (not deployed)
