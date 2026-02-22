@@ -7,19 +7,21 @@ import SettingsScreen from '../screens/SettingsScreen';
 
 type TabName = 'dashboard' | 'audit' | 'settings';
 
-export default function TabNavigation() {
+// TabNavigation receives the navigation prop from the Stack.Navigator in App.tsx
+// so sub-screens (BlockedCalls, Stats) can be pushed onto the stack
+export default function TabNavigation({ navigation }: { navigation?: any }) {
     const [activeTab, setActiveTab] = useState<TabName>('dashboard');
 
     const renderScreen = () => {
         switch (activeTab) {
             case 'dashboard':
-                return <ProtectionDashboard />;
+                return <ProtectionDashboard navigation={navigation} />;
             case 'audit':
                 return <AuditLogScreen />;
             case 'settings':
-                return <SettingsScreen />;
+                return <SettingsScreen navigation={navigation} />;
             default:
-                return <ProtectionDashboard />;
+                return <ProtectionDashboard navigation={navigation} />;
         }
     };
 
@@ -36,9 +38,7 @@ export default function TabNavigation() {
                     style={styles.tab}
                     onPress={() => setActiveTab('dashboard')}
                 >
-                    <Text style={styles.tabIcon}>
-                        {activeTab === 'dashboard' ? '🛡️' : '🛡'}
-                    </Text>
+                    <Text style={styles.tabIcon}>🛡️</Text>
                     <Text style={[
                         styles.tabLabel,
                         activeTab === 'dashboard' && styles.tabLabelActive
@@ -51,9 +51,7 @@ export default function TabNavigation() {
                     style={styles.tab}
                     onPress={() => setActiveTab('audit')}
                 >
-                    <Text style={styles.tabIcon}>
-                        {activeTab === 'audit' ? '📋' : '📋'}
-                    </Text>
+                    <Text style={styles.tabIcon}>📋</Text>
                     <Text style={[
                         styles.tabLabel,
                         activeTab === 'audit' && styles.tabLabelActive
@@ -66,9 +64,7 @@ export default function TabNavigation() {
                     style={styles.tab}
                     onPress={() => setActiveTab('settings')}
                 >
-                    <Text style={styles.tabIcon}>
-                        {activeTab === 'settings' ? '⚙️' : '⚙️'}
-                    </Text>
+                    <Text style={styles.tabIcon}>⚙️</Text>
                     <Text style={[
                         styles.tabLabel,
                         activeTab === 'settings' && styles.tabLabelActive

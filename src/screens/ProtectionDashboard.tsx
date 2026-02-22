@@ -8,7 +8,8 @@ import { getBlocklist } from '../services/database';
 import MetricsModule from '../modules/MetricsModule';
 import { addAuditLogEntry } from '../services/auditLog';
 
-export default function ProtectionDashboard() {
+// Accept optional navigation prop so the Audit Log link and Report button can navigate
+export default function ProtectionDashboard({ navigation }: { navigation?: any }) {
     const [isActive, setIsActive] = useState(true);
     const [callsBlocked, setCallsBlocked] = useState(0);
     const [textsFiltered, setTextsFiltered] = useState(0);
@@ -51,8 +52,12 @@ export default function ProtectionDashboard() {
     };
 
     const handleViewAuditLog = () => {
-        // Navigate to audit log screen
-        console.log('View Audit Log pressed');
+        // The AuditLog is a tab in TabNavigation — switching tabs is handled by
+        // the parent TabNavigation component. If a navigation prop is available
+        // (e.g. from a stack screen), navigate there directly.
+        if (navigation) {
+            navigation.navigate('AuditLog');
+        }
     };
 
     return (
@@ -104,7 +109,9 @@ export default function ProtectionDashboard() {
                     </View>
 
                     <TouchableOpacity onPress={handleViewAuditLog} style={styles.auditLink}>
-                        <Text style={styles.auditLinkText}>View Local Audit Log</Text>
+                        <Text style={[styles.auditLinkText, navigation && styles.auditLinkActive]}>
+                            View Local Audit Log →
+                        </Text>
                     </TouchableOpacity>
                 </Animated.View>
 
@@ -168,6 +175,9 @@ const styles = StyleSheet.create({
     auditLinkText: {
         fontSize: 14,
         color: '#636366',
+    },
+    auditLinkActive: {
+        color: '#007AFF',
     },
     spacer: {
         flex: 1,

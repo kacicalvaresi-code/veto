@@ -48,6 +48,12 @@
     "scheme": "veto",
     "description": "Block spam calls with zero data collection. Privacy-first spam call blocker that keeps all your data on your device.",
     "privacy": "public",
-    "primaryColor": "#4A90E2"
+    "primaryColor": "#4A90E2",
+    "extra": {
+      "eas": {
+        "projectId": "YOUR_EAS_PROJECT_ID"
+      }
+    },
+    "owner": "kacicalvaresi"
   }
 }
