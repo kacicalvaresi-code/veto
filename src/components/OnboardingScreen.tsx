@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, ImageBackground, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, ImageBackground, Dimensions, ImageStyle } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -7,14 +7,16 @@ const { width, height } = Dimensions.get('window');
 
 interface OnboardingScreenProps {
     backgroundImage: any;
+    imageStyle?: ImageStyle;
     children: React.ReactNode;
 }
 
-export default function OnboardingScreen({ backgroundImage, children }: OnboardingScreenProps) {
+export default function OnboardingScreen({ backgroundImage, imageStyle, children }: OnboardingScreenProps) {
     return (
         <ImageBackground
             source={backgroundImage}
             style={styles.background}
+            imageStyle={imageStyle}
             resizeMode="cover"
         >
             <LinearGradient
