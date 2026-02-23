@@ -20,7 +20,7 @@ export default function EnableBlockingScreen({ onNext }: EnableBlockingScreenPro
     };
 
     return (
-        <OnboardingScreen backgroundImage={require('../../../assets/onboarding/settings.png')}>
+        <OnboardingScreen backgroundImage={require('../../../assets/onboarding/settings.jpg')}>
             <View style={styles.container}>
                 {/* Progress Dots */}
                 <View style={styles.progressContainer}>
