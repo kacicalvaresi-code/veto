@@ -10,7 +10,7 @@ interface SuccessScreenProps {
 
 export default function SuccessScreen({ onFinish }: SuccessScreenProps) {
     return (
-        <OnboardingScreen backgroundImage={require('../../../assets/onboarding/success.jpg')}>
+        <OnboardingScreen backgroundImage={require('../../../assets/onboarding/success.jpg')} imageStyle={{ top: -80 }}>
             <View style={styles.container}>
                 {/* Progress Dots */}
                 <View style={styles.progressContainer}>
