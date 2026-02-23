@@ -11,7 +11,7 @@ interface WelcomeScreenProps {
 
 export default function WelcomeScreen({ onNext, onSkip }: WelcomeScreenProps) {
     return (
-        <OnboardingScreen backgroundImage={require('../../../assets/onboarding/welcome.jpg')} imageStyle={{ left: -60 }}>
+        <OnboardingScreen backgroundImage={require('../../../assets/onboarding/welcome.jpg')} >
             <View style={styles.container}>
                 {/* Progress Dots */}
                 <View style={styles.progressContainer}>
