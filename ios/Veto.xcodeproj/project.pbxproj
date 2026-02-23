@@ -17,6 +17,10 @@
 		75A16B52507347B68233EB71 /* noop-file.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9702BBF2A69F4E1589246DE7 /* noop-file.swift */; };
 AA000001000000000000AA02 /* VetoMetricsModule.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000001000000000000AA01 /* VetoMetricsModule.swift */; };
 AA000001000000000000AA04 /* VetoMetricsModule.m in Sources */ = {isa = PBXBuildFile; fileRef = AA000001000000000000AA03 /* VetoMetricsModule.m */; };
+
+		BB000001000000000000BB04 /* CallDirectoryHandler.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB000001000000000000BB01 /* CallDirectoryHandler.swift */; };
+		BB000001000000000000BB05 /* Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = BB000001000000000000BB02 /* CallDirectoryHandler-Info.plist */; };
+		BB000001000000000000BB06 /* CallDirectoryHandler.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = BB000001000000000000BB0A /* CallDirectoryHandler */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -37,8 +41,28 @@ AA000001000000000000AA04 /* VetoMetricsModule.m in Sources */ = {isa = PBXBuildF
 AA000001000000000000AA01 /* VetoMetricsModule.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = VetoMetricsModule.swift; path = Veto/VetoMetricsModule.swift; sourceTree = "<group>"; };
 AA000001000000000000AA03 /* VetoMetricsModule.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = VetoMetricsModule.m; path = Veto/VetoMetricsModule.m; sourceTree = "<group>"; };
 		ADAD9A07F0744BEA8A3B3848 /* Veto-Bridging-Header.h */ = {isa = PBXFileReference; name = "Veto-Bridging-Header.h"; path = "Veto/Veto-Bridging-Header.h"; sourceTree = "<group>"; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; explicitFileType = undefined; includeInIndex = 0; };
+
+		BB000001000000000000BB01 /* CallDirectoryHandler.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = CallDirectoryHandler.swift; path = CallDirectoryHandler/CallDirectoryHandler.swift; sourceTree = "<group>"; };
+		BB000001000000000000BB02 /* CallDirectoryHandler-Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = Info.plist; path = CallDirectoryHandler/Info.plist; sourceTree = "<group>"; };
+		BB000001000000000000BB03 /* CallDirectoryHandler.entitlements */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.entitlements; name = CallDirectoryHandler.entitlements; path = CallDirectoryHandler/CallDirectoryHandler.entitlements; sourceTree = "<group>"; };
+
+		BB000001000000000000BB0A /* CallDirectoryHandler.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = CallDirectoryHandler.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+
+/* Begin PBXCopyFilesBuildPhase section */
+		BB000001000000000000BB0E /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				BB000001000000000000BB06 /* CallDirectoryHandler.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
 /* Begin PBXFrameworksBuildPhase section */
 		13B07F8C1A680F5B00A75B9A /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
@@ -89,6 +113,7 @@ AA000001000000000000AA03 /* VetoMetricsModule.m */ = {isa = PBXFileReference; fi
 			isa = PBXGroup;
 			children = (
 				13B07FAE1A68108700A75B9A /* Veto */,
+				BB000001000000000000BB0F /* CallDirectoryHandler */,
 				832341AE1AAA6A7D00B99B32 /* Libraries */,
 				83CBBA001A601CBA00E9B192 /* Products */,
 				2D16E6871FA4F8E400B85C8A /* Frameworks */,
@@ -104,6 +129,7 @@ AA000001000000000000AA03 /* VetoMetricsModule.m */ = {isa = PBXFileReference; fi
 			isa = PBXGroup;
 			children = (
 				13B07F961A680F5B00A75B9A /* Veto.app */,
+				BB000001000000000000BB0A /* CallDirectoryHandler.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -142,8 +168,37 @@ AA000001000000000000AA03 /* VetoMetricsModule.m */ = {isa = PBXFileReference; fi
 			name = ExpoModulesProviders;
 			sourceTree = "<group>";
 		};
+
+		BB000001000000000000BB0F /* CallDirectoryHandler */ = {
+			isa = PBXGroup;
+			children = (
+				BB000001000000000000BB01 /* CallDirectoryHandler.swift */,
+				BB000001000000000000BB02 /* Info.plist */,
+				BB000001000000000000BB03 /* CallDirectoryHandler.entitlements */,
+			);
+			name = CallDirectoryHandler;
+			path = CallDirectoryHandler;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
+
+/* Begin PBXContainerItemProxy section */
+BB000001000000000000BB10 /* PBXContainerItemProxy */ = {
+isa = PBXContainerItemProxy;
+containerPortal = 83CBB9F71A601CBA00E9B192 /* Project object */;
+proxyType = 1;
+remoteGlobalIDString = BB000001000000000000BB0A;
+remoteInfo = CallDirectoryHandler;
+};
+/* End PBXContainerItemProxy section */
+/* Begin PBXTargetDependency section */
+BB000001000000000000BB11 /* PBXTargetDependency */ = {
+isa = PBXTargetDependency;
+target = BB000001000000000000BB0A /* CallDirectoryHandler */;
+targetProxy = BB000001000000000000BB10 /* PBXContainerItemProxy */;
+};
+/* End PBXTargetDependency section */
 /* Begin PBXNativeTarget section */
 		13B07F861A680F5B00A75B9A /* Veto */ = {
 			isa = PBXNativeTarget;
@@ -155,15 +210,35 @@ AA000001000000000000AA03 /* VetoMetricsModule.m */ = {isa = PBXFileReference; fi
 				13B07F8E1A680F5B00A75B9A /* Resources */,
 				00DD1BFF1BD5951E006B06BC /* Bundle React Native code and images */,
 				800E24972A6A228C8D4807E9 /* [CP] Copy Pods Resources */,
+				BB000001000000000000BB0E /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				BB000001000000000000BB11 /* PBXTargetDependency */,
 			);
 			name = Veto;
 			productName = Veto;
 			productReference = 13B07F961A680F5B00A75B9A /* Veto.app */;
 			productType = "com.apple.product-type.application";
+		};
+
+		BB000001000000000000BB0A /* CallDirectoryHandler */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = BB000001000000000000BB0D /* Build configuration list for PBXNativeTarget "CallDirectoryHandler" */;
+			buildPhases = (
+				BB000001000000000000BB07 /* Sources */,
+				BB000001000000000000BB09 /* Frameworks */,
+				BB000001000000000000BB08 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = CallDirectoryHandler;
+			productName = CallDirectoryHandler;
+			productReference = BB000001000000000000BB0A /* CallDirectoryHandler.appex */;
+			productType = "com.apple.product-type.app-extension";
 		};
 /* End PBXNativeTarget section */
 
@@ -175,6 +250,10 @@ AA000001000000000000AA03 /* VetoMetricsModule.m */ = {isa = PBXFileReference; fi
 				TargetAttributes = {
 					13B07F861A680F5B00A75B9A = {
 						LastSwiftMigration = 1250;
+					};
+					BB000001000000000000BB0A = {
+						CreatedOnToolsVersion = 11.3.1;
+						LastSwiftMigration = 1130;
 					};
 				};
 			};
@@ -192,6 +271,7 @@ AA000001000000000000AA03 /* VetoMetricsModule.m */ = {isa = PBXFileReference; fi
 			projectRoot = "";
 			targets = (
 				13B07F861A680F5B00A75B9A /* Veto */,
+				BB000001000000000000BB0A /* CallDirectoryHandler */,
 			);
 		};
 /* End PBXProject section */
@@ -287,6 +367,28 @@ AA000001000000000000AA03 /* VetoMetricsModule.m */ = {isa = PBXFileReference; fi
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
+		BB000001000000000000BB07 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				BB000001000000000000BB04 /* CallDirectoryHandler.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		BB000001000000000000BB08 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		BB000001000000000000BB09 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 
 /* Begin XCBuildConfiguration section */
 		13B07F941A680F5B00A75B9A /* Debug */ = {
@@ -452,6 +554,46 @@ AA000001000000000000AA03 /* VetoMetricsModule.m */ = {isa = PBXFileReference; fi
 			};
 			name = Release;
 		};
+
+		BB000001000000000000BB0B /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_ENABLE_MODULES = YES;
+				CODE_SIGN_ENTITLEMENTS = CallDirectoryHandler/CallDirectoryHandler.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 3D2Y23S825;
+				INFOPLIST_FILE = CallDirectoryHandler/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 13.4;
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @executable_path/../../Frameworks";
+				PRODUCT_BUNDLE_IDENTIFIER = com.kacicalvaresi.veto.CallDirectoryHandler;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		BB000001000000000000BB0C /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_ENABLE_MODULES = YES;
+				CODE_SIGN_ENTITLEMENTS = CallDirectoryHandler/CallDirectoryHandler.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 3D2Y23S825;
+				INFOPLIST_FILE = CallDirectoryHandler/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 13.4;
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @executable_path/../../Frameworks";
+				PRODUCT_BUNDLE_IDENTIFIER = com.kacicalvaresi.veto.CallDirectoryHandler;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -469,6 +611,16 @@ AA000001000000000000AA03 /* VetoMetricsModule.m */ = {isa = PBXFileReference; fi
 			buildConfigurations = (
 				83CBBA201A601CBA00E9B192 /* Debug */,
 				83CBBA211A601CBA00E9B192 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+
+		BB000001000000000000BB0D /* Build configuration list for PBXNativeTarget "CallDirectoryHandler" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				BB000001000000000000BB0B /* Debug */,
+				BB000001000000000000BB0C /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
