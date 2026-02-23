@@ -15,6 +15,8 @@
 		B18059E884C0ABDD17F3DC3D /* ExpoModulesProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAC715A2D49A985799AEE119 /* ExpoModulesProvider.swift */; };
 		BB2F792D24A3F905000567C9 /* Expo.plist in Resources */ = {isa = PBXBuildFile; fileRef = BB2F792C24A3F905000567C9 /* Expo.plist */; };
 		75A16B52507347B68233EB71 /* noop-file.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9702BBF2A69F4E1589246DE7 /* noop-file.swift */; };
+AA000001000000000000AA02 /* VetoMetricsModule.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000001000000000000AA01 /* VetoMetricsModule.swift */; };
+AA000001000000000000AA04 /* VetoMetricsModule.m in Sources */ = {isa = PBXBuildFile; fileRef = AA000001000000000000AA03 /* VetoMetricsModule.m */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -32,6 +34,8 @@
 		ED297162215061F000B7C4FE /* JavaScriptCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = JavaScriptCore.framework; path = System/Library/Frameworks/JavaScriptCore.framework; sourceTree = SDKROOT; };
 		FAC715A2D49A985799AEE119 /* ExpoModulesProvider.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ExpoModulesProvider.swift; path = "Pods/Target Support Files/Pods-Veto/ExpoModulesProvider.swift"; sourceTree = "<group>"; };
 		9702BBF2A69F4E1589246DE7 /* noop-file.swift */ = {isa = PBXFileReference; name = "noop-file.swift"; path = "Veto/noop-file.swift"; sourceTree = "<group>"; fileEncoding = 4; lastKnownFileType = sourcecode.swift; explicitFileType = undefined; includeInIndex = 0; };
+AA000001000000000000AA01 /* VetoMetricsModule.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = VetoMetricsModule.swift; path = Veto/VetoMetricsModule.swift; sourceTree = "<group>"; };
+AA000001000000000000AA03 /* VetoMetricsModule.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = VetoMetricsModule.m; path = Veto/VetoMetricsModule.m; sourceTree = "<group>"; };
 		ADAD9A07F0744BEA8A3B3848 /* Veto-Bridging-Header.h */ = {isa = PBXFileReference; name = "Veto-Bridging-Header.h"; path = "Veto/Veto-Bridging-Header.h"; sourceTree = "<group>"; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; explicitFileType = undefined; includeInIndex = 0; };
 /* End PBXFileReference section */
 
@@ -58,6 +62,8 @@
 				13B07FB71A68108700A75B9A /* main.m */,
 				AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */,
 				9702BBF2A69F4E1589246DE7 /* noop-file.swift */,
+				AA000001000000000000AA01 /* VetoMetricsModule.swift */,
+				AA000001000000000000AA03 /* VetoMetricsModule.m */,
 				ADAD9A07F0744BEA8A3B3848 /* Veto-Bridging-Header.h */,
 			);
 			name = Veto;
@@ -275,6 +281,8 @@
 				13B07FC11A68108700A75B9A /* main.m in Sources */,
 				B18059E884C0ABDD17F3DC3D /* ExpoModulesProvider.swift in Sources */,
 				75A16B52507347B68233EB71 /* noop-file.swift in Sources */,
+				AA000001000000000000AA02 /* VetoMetricsModule.swift in Sources */,
+				AA000001000000000000AA04 /* VetoMetricsModule.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
