@@ -5,11 +5,11 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "dark",
     "splash": {
       "image": "./assets/splash.png",
       "resizeMode": "contain",
-      "backgroundColor": "#2C3E50"
+      "backgroundColor": "#0A0A0A"
     },
     "assetBundlePatterns": [
       "**/*"
@@ -49,11 +49,11 @@
     "description": "Block spam calls with zero data collection. Privacy-first spam call blocker that keeps all your data on your device.",
     "privacy": "public",
     "primaryColor": "#4A90E2",
+    "owner": "kacinpoint",
     "extra": {
       "eas": {
-        "projectId": "YOUR_EAS_PROJECT_ID"
+        "projectId": "fa8c5de9-4d1a-4305-8feb-9b12c65a5a07"
       }
-    },
-    "owner": "kacicalvaresi"
+    }
   }
 }
