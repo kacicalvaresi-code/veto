@@ -1,7 +1,7 @@
 import * as SQLite from 'expo-sqlite';
 import { Platform } from 'react-native';
 import SharedGroupPreferences from 'react-native-shared-group-preferences';
-import SharedPreferences from 'react-native-shared-preferences';
+// Android SharedPreferences not used (iOS-only app)
 
 const APP_GROUP = 'group.com.kacicalvaresi.veto';
 const ANDROID_PREFS_NAME = 'VetoBlocklist';
@@ -39,14 +39,8 @@ const syncToExtension = async () => {
             
             console.log(`[iOS] Synced ${phoneNumbers.length} numbers to App Group`);
         } else if (Platform.OS === 'android') {
-            // Android: Sync to SharedPreferences for CallScreeningService
-            await SharedPreferences.setItem(
-                'blocklist',
-                JSON.stringify(phoneNumbers),
-                ANDROID_PREFS_NAME
-            );
-            
-            console.log(`[Android] Synced ${phoneNumbers.length} numbers to SharedPreferences`);
+            // Android: SharedPreferences sync not implemented (iOS-only app)
+            console.log('[Android] SharedPreferences sync skipped - iOS only');
         }
     } catch (error) {
         console.error('Error syncing to extension:', error);
