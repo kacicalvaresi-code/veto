@@ -42,9 +42,9 @@ AA000001000000000000AA01 /* VetoMetricsModule.swift */ = {isa = PBXFileReference
 AA000001000000000000AA03 /* VetoMetricsModule.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = VetoMetricsModule.m; path = Veto/VetoMetricsModule.m; sourceTree = "<group>"; };
 		ADAD9A07F0744BEA8A3B3848 /* Veto-Bridging-Header.h */ = {isa = PBXFileReference; name = "Veto-Bridging-Header.h"; path = "Veto/Veto-Bridging-Header.h"; sourceTree = "<group>"; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; explicitFileType = undefined; includeInIndex = 0; };
 
-		BB000001000000000000BB01 /* CallDirectoryHandler.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = CallDirectoryHandler.swift; path = CallDirectoryHandler/CallDirectoryHandler.swift; sourceTree = "<group>"; };
-		BB000001000000000000BB02 /* CallDirectoryHandler-Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = Info.plist; path = CallDirectoryHandler/Info.plist; sourceTree = "<group>"; };
-		BB000001000000000000BB03 /* CallDirectoryHandler.entitlements */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.entitlements; name = CallDirectoryHandler.entitlements; path = CallDirectoryHandler/CallDirectoryHandler.entitlements; sourceTree = "<group>"; };
+		BB000001000000000000BB01 /* CallDirectoryHandler.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = CallDirectoryHandler.swift; path = CallDirectoryHandler.swift; sourceTree = "<group>"; };
+		BB000001000000000000BB02 /* CallDirectoryHandler-Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = Info.plist; path = Info.plist; sourceTree = "<group>"; };
+		BB000001000000000000BB03 /* CallDirectoryHandler.entitlements */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.entitlements; name = CallDirectoryHandler.entitlements; path = CallDirectoryHandler.entitlements; sourceTree = "<group>"; };
 
 		BB000001000000000000BB0A /* CallDirectoryHandler.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = CallDirectoryHandler.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
