@@ -9,6 +9,7 @@ import {
     getValidationErrorMessage 
 } from '../utils/phoneNumber';
 import { addAuditLogEntry } from '../services/auditLog';
+import * as Haptics from 'expo-haptics';
 
 export default function BlocklistManager() {
     const [numbers, setNumbers] = useState<BlockedNumber[]>([]);
@@ -52,6 +53,8 @@ export default function BlocklistManager() {
             const success = addBlockedNumber(formattedNumber, newLabel);
             
             if (success) {
+                // Haptic feedback: success notification on block
+                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
                 // Auto-report to backend for community intelligence (Anonymous)
                 await reportSpam(formattedNumber, newLabel || 'Spam');
                 
@@ -92,6 +95,7 @@ export default function BlocklistManager() {
                     text: 'Remove',
                     style: 'destructive',
                     onPress: () => {
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
                         removeBlockedNumber(id);
                         refreshList();
                     },

@@ -17,6 +17,9 @@
 		75A16B52507347B68233EB71 /* noop-file.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9702BBF2A69F4E1589246DE7 /* noop-file.swift */; };
 AA000001000000000000AA02 /* VetoMetricsModule.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000001000000000000AA01 /* VetoMetricsModule.swift */; };
 AA000001000000000000AA04 /* VetoMetricsModule.m in Sources */ = {isa = PBXBuildFile; fileRef = AA000001000000000000AA03 /* VetoMetricsModule.m */; };
+		CC000001000000000000CC03 /* VetoSyncModule.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC000001000000000000CC01 /* VetoSyncModule.swift */; };
+		CC000001000000000000CC04 /* VetoSyncModule.m in Sources */ = {isa = PBXBuildFile; fileRef = CC000001000000000000CC02 /* VetoSyncModule.m */; };
+		DD000001000000000000DD02 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = DD000001000000000000DD01 /* PrivacyInfo.xcprivacy */; };
 
 		BB000001000000000000BB04 /* CallDirectoryHandler.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB000001000000000000BB01 /* CallDirectoryHandler.swift */; };
 		BB000001000000000000BB05 /* Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = BB000001000000000000BB02 /* CallDirectoryHandler-Info.plist */; };
@@ -40,6 +43,9 @@ AA000001000000000000AA04 /* VetoMetricsModule.m in Sources */ = {isa = PBXBuildF
 		9702BBF2A69F4E1589246DE7 /* noop-file.swift */ = {isa = PBXFileReference; name = "noop-file.swift"; path = "Veto/noop-file.swift"; sourceTree = "<group>"; fileEncoding = 4; lastKnownFileType = sourcecode.swift; explicitFileType = undefined; includeInIndex = 0; };
 AA000001000000000000AA01 /* VetoMetricsModule.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = VetoMetricsModule.swift; path = Veto/VetoMetricsModule.swift; sourceTree = "<group>"; };
 AA000001000000000000AA03 /* VetoMetricsModule.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = VetoMetricsModule.m; path = Veto/VetoMetricsModule.m; sourceTree = "<group>"; };
+		CC000001000000000000CC01 /* VetoSyncModule.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = VetoSyncModule.swift; path = Veto/VetoSyncModule.swift; sourceTree = "<group>"; };
+		CC000001000000000000CC02 /* VetoSyncModule.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = VetoSyncModule.m; path = Veto/VetoSyncModule.m; sourceTree = "<group>"; };
+		DD000001000000000000DD01 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; name = PrivacyInfo.xcprivacy; path = Veto/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		ADAD9A07F0744BEA8A3B3848 /* Veto-Bridging-Header.h */ = {isa = PBXFileReference; name = "Veto-Bridging-Header.h"; path = "Veto/Veto-Bridging-Header.h"; sourceTree = "<group>"; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; explicitFileType = undefined; includeInIndex = 0; };
 
 		BB000001000000000000BB01 /* CallDirectoryHandler.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = CallDirectoryHandler.swift; path = CallDirectoryHandler.swift; sourceTree = "<group>"; };
@@ -88,6 +94,9 @@ AA000001000000000000AA03 /* VetoMetricsModule.m */ = {isa = PBXFileReference; fi
 				9702BBF2A69F4E1589246DE7 /* noop-file.swift */,
 				AA000001000000000000AA01 /* VetoMetricsModule.swift */,
 				AA000001000000000000AA03 /* VetoMetricsModule.m */,
+				CC000001000000000000CC01 /* VetoSyncModule.swift */,
+				CC000001000000000000CC02 /* VetoSyncModule.m */,
+				DD000001000000000000DD01 /* PrivacyInfo.xcprivacy */,
 				ADAD9A07F0744BEA8A3B3848 /* Veto-Bridging-Header.h */,
 			);
 			name = Veto;
@@ -363,6 +372,8 @@ targetProxy = BB000001000000000000BB10 /* PBXContainerItemProxy */;
 				75A16B52507347B68233EB71 /* noop-file.swift in Sources */,
 				AA000001000000000000AA02 /* VetoMetricsModule.swift in Sources */,
 				AA000001000000000000AA04 /* VetoMetricsModule.m in Sources */,
+				CC000001000000000000CC03 /* VetoSyncModule.swift in Sources */,
+				CC000001000000000000CC04 /* VetoSyncModule.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
