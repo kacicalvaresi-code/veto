@@ -1,21 +1,49 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { AppState, type AppStateStatus } from 'react-native';
 import ProtectionDashboard from '../screens/ProtectionDashboard';
 import AuditLogScreen from '../screens/AuditLogScreen';
 import SettingsScreen from '../screens/SettingsScreen';
+import ScreenedCallsScreen from '../screens/ScreenedCallsScreen';
+import { getScreenedCalls } from '../modules/VoicemailModule';
 
-type TabName = 'dashboard' | 'audit' | 'settings';
+type TabName = 'dashboard' | 'screened' | 'audit' | 'settings';
 
 // TabNavigation receives the navigation prop from the Stack.Navigator in App.tsx
 // so sub-screens (BlockedCalls, Stats) can be pushed onto the stack
 export default function TabNavigation({ navigation }: { navigation?: any }) {
-    const [activeTab, setActiveTab] = useState<TabName>('dashboard');
+    const [activeTab, setActiveTab]       = useState<TabName>('dashboard');
+    const [pendingCount, setPendingCount] = useState(0);
+
+    // Poll for pending screened calls whenever the app comes to the foreground
+    const refreshPendingCount = useCallback(async () => {
+        const calls = await getScreenedCalls();
+        const count = calls.filter(c => c.action === 'pending').length;
+        setPendingCount(count);
+    }, []);
+
+    useEffect(() => {
+        refreshPendingCount();
+        const sub = AppState.addEventListener('change', (state: AppStateStatus) => {
+            if (state === 'active') refreshPendingCount();
+        });
+        return () => sub.remove();
+    }, [refreshPendingCount]);
+
+    // Refresh badge count when user navigates away from the screened tab
+    useEffect(() => {
+        if (activeTab !== 'screened') {
+            refreshPendingCount();
+        }
+    }, [activeTab, refreshPendingCount]);
 
     const renderScreen = () => {
         switch (activeTab) {
             case 'dashboard':
                 return <ProtectionDashboard navigation={navigation} />;
+            case 'screened':
+                return <ScreenedCallsScreen />;
             case 'audit':
                 return <AuditLogScreen />;
             case 'settings':
@@ -34,6 +62,7 @@ export default function TabNavigation({ navigation }: { navigation?: any }) {
 
             {/* Tab Bar */}
             <SafeAreaView style={styles.tabBar} edges={['bottom']}>
+                {/* Dashboard */}
                 <TouchableOpacity
                     style={styles.tab}
                     onPress={() => setActiveTab('dashboard')}
@@ -41,12 +70,36 @@ export default function TabNavigation({ navigation }: { navigation?: any }) {
                     <Text style={styles.tabIcon}>🛡️</Text>
                     <Text style={[
                         styles.tabLabel,
-                        activeTab === 'dashboard' && styles.tabLabelActive
+                        activeTab === 'dashboard' && styles.tabLabelActive,
                     ]}>
                         Dashboard
                     </Text>
                 </TouchableOpacity>
 
+                {/* Screened Calls — with badge */}
+                <TouchableOpacity
+                    style={styles.tab}
+                    onPress={() => setActiveTab('screened')}
+                >
+                    <View style={styles.tabIconWrapper}>
+                        <Text style={styles.tabIcon}>📬</Text>
+                        {pendingCount > 0 && (
+                            <View style={styles.badge}>
+                                <Text style={styles.badgeText}>
+                                    {pendingCount > 99 ? '99+' : pendingCount}
+                                </Text>
+                            </View>
+                        )}
+                    </View>
+                    <Text style={[
+                        styles.tabLabel,
+                        activeTab === 'screened' && styles.tabLabelActive,
+                    ]}>
+                        Screened
+                    </Text>
+                </TouchableOpacity>
+
+                {/* Audit Log */}
                 <TouchableOpacity
                     style={styles.tab}
                     onPress={() => setActiveTab('audit')}
@@ -54,12 +107,13 @@ export default function TabNavigation({ navigation }: { navigation?: any }) {
                     <Text style={styles.tabIcon}>📋</Text>
                     <Text style={[
                         styles.tabLabel,
-                        activeTab === 'audit' && styles.tabLabelActive
+                        activeTab === 'audit' && styles.tabLabelActive,
                     ]}>
                         Audit Log
                     </Text>
                 </TouchableOpacity>
 
+                {/* Settings */}
                 <TouchableOpacity
                     style={styles.tab}
                     onPress={() => setActiveTab('settings')}
@@ -67,7 +121,7 @@ export default function TabNavigation({ navigation }: { navigation?: any }) {
                     <Text style={styles.tabIcon}>⚙️</Text>
                     <Text style={[
                         styles.tabLabel,
-                        activeTab === 'settings' && styles.tabLabelActive
+                        activeTab === 'settings' && styles.tabLabelActive,
                     ]}>
                         Settings
                     </Text>
@@ -97,6 +151,9 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         paddingVertical: 8,
     },
+    tabIconWrapper: {
+        position: 'relative',
+    },
     tabIcon: {
         fontSize: 24,
         marginBottom: 4,
@@ -108,5 +165,22 @@ const styles = StyleSheet.create({
     },
     tabLabelActive: {
         color: '#007AFF',
+    },
+    badge: {
+        position: 'absolute',
+        top: -4,
+        right: -8,
+        backgroundColor: '#FF3B30',
+        borderRadius: 8,
+        minWidth: 16,
+        height: 16,
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingHorizontal: 3,
+    },
+    badgeText: {
+        fontSize: 10,
+        fontWeight: '700',
+        color: '#FFFFFF',
     },
 });

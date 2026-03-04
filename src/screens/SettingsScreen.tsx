@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
     View,
     Text,
@@ -8,25 +8,84 @@ import {
     Linking,
     Alert,
     Switch,
+    ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { clearAuditLog } from '../services/auditLog';
 import { resetMetrics } from '../services/metrics';
 import { resetOnboarding } from './OnboardingFlow';
+import {
+    syncSpamDatabase,
+    getLastSyncInfo,
+    isSyncDue,
+    type SpamSyncResult,
+} from '../services/spamSync';
 
 export default function SettingsScreen() {
     const [anonymousReporting, setAnonymousReporting] = useState(true);
+    const [isSyncing, setIsSyncing]                   = useState(false);
+    const [syncInfo, setSyncInfo]                     = useState<{
+        timestamp: string | null;
+        count    : number;
+        error    : string | null;
+    }>({ timestamp: null, count: 0, error: null });
+    const [syncDue, setSyncDue] = useState(false);
+
+    // Load last sync info on mount
+    useEffect(() => {
+        (async () => {
+            const info = await getLastSyncInfo();
+            setSyncInfo(info);
+            const due = await isSyncDue();
+            setSyncDue(due);
+        })();
+    }, []);
+
+    const handleSpamSync = useCallback(async (force = false) => {
+        setIsSyncing(true);
+        try {
+            const result: SpamSyncResult = await syncSpamDatabase(force);
+            const info = await getLastSyncInfo();
+            setSyncInfo(info);
+            setSyncDue(false);
+
+            if (result.skipped) {
+                Alert.alert(
+                    'Already Up to Date',
+                    `Your spam database is current.\n${result.totalServer.toLocaleString()} numbers protected.`
+                );
+            } else if (result.error) {
+                Alert.alert('Sync Failed', result.error);
+            } else {
+                Alert.alert(
+                    'Spam Database Updated',
+                    `${result.imported.toLocaleString()} new numbers added.\n` +
+                    `Total protection: ${result.totalServer.toLocaleString()} numbers.`
+                );
+            }
+        } finally {
+            setIsSyncing(false);
+        }
+    }, []);
+
+    const formatSyncDate = (iso: string | null): string => {
+        if (!iso) return 'Never';
+        const d = new Date(iso);
+        return d.toLocaleDateString(undefined, {
+            month: 'short', day: 'numeric', year: 'numeric',
+        });
+    };
 
     const handleOpenPrivacyPolicy = () => {
-        Linking.openURL('https://veto.app/privacy');
+        Linking.openURL('https://vetospam.app/privacy');
     };
 
     const handleOpenTerms = () => {
-        Linking.openURL('https://veto.app/terms');
+        Linking.openURL('https://vetospam.app/terms');
     };
 
     const handleContactSupport = () => {
-        Linking.openURL('mailto:support@veto.app?subject=Veto Support Request');
+        Linking.openURL('mailto:support@vetospam.app?subject=Veto Support Request');
     };
 
     const handleClearData = () => {
@@ -61,10 +120,71 @@ export default function SettingsScreen() {
                     <Text style={styles.title}>Settings</Text>
                 </View>
 
-                {/* Privacy Section */}
+                {/* ── Spam Database Section ─────────────────────────────────── */}
+                <View style={styles.section}>
+                    <Text style={styles.sectionTitle}>Spam Database</Text>
+
+                    <View style={styles.settingRow}>
+                        <View style={styles.settingInfo}>
+                            <Text style={styles.settingLabel}>Last Updated</Text>
+                            <Text style={styles.settingDescription}>
+                                {formatSyncDate(syncInfo.timestamp)}
+                                {syncInfo.count > 0
+                                    ? `  ·  ${syncInfo.count.toLocaleString()} numbers added`
+                                    : ''}
+                            </Text>
+                            {syncInfo.error && (
+                                <Text style={styles.errorText}>
+                                    Last sync error: {syncInfo.error}
+                                </Text>
+                            )}
+                        </View>
+                        {syncDue && !isSyncing && (
+                            <View style={styles.updateBadge}>
+                                <Text style={styles.updateBadgeText}>Update</Text>
+                            </View>
+                        )}
+                    </View>
+
+                    <TouchableOpacity
+                        style={[styles.settingRow, isSyncing && styles.settingRowDisabled]}
+                        onPress={() => handleSpamSync(false)}
+                        disabled={isSyncing}
+                    >
+                        {isSyncing ? (
+                            <ActivityIndicator size="small" color="#007AFF" style={{ marginRight: 8 }} />
+                        ) : null}
+                        <Text style={styles.settingLabel}>
+                            {isSyncing ? 'Syncing…' : 'Sync Spam Database'}
+                        </Text>
+                        {!isSyncing && <Text style={styles.arrow}>›</Text>}
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                        style={[styles.settingRow, isSyncing && styles.settingRowDisabled]}
+                        onPress={() => handleSpamSync(true)}
+                        disabled={isSyncing}
+                    >
+                        <Text style={[styles.settingLabel, styles.subtleText]}>
+                            Force Refresh
+                        </Text>
+                        {!isSyncing && <Text style={styles.arrow}>›</Text>}
+                    </TouchableOpacity>
+
+                    <View style={styles.infoBox}>
+                        <Text style={styles.infoText}>
+                            The spam database is sourced from the FTC Do-Not-Call registry and
+                            community reports. It is downloaded directly to your device and
+                            processed entirely offline. No call data or usage information ever
+                            leaves your phone.
+                        </Text>
+                    </View>
+                </View>
+
+                {/* ── Privacy Section ───────────────────────────────────────── */}
                 <View style={styles.section}>
                     <Text style={styles.sectionTitle}>Privacy</Text>
-                    
+
                     <View style={styles.settingRow}>
                         <View style={styles.settingInfo}>
                             <Text style={styles.settingLabel}>Anonymous Reporting</Text>
@@ -91,18 +211,18 @@ export default function SettingsScreen() {
                     </TouchableOpacity>
                 </View>
 
-                {/* About Section */}
+                {/* ── About Section ─────────────────────────────────────────── */}
                 <View style={styles.section}>
                     <Text style={styles.sectionTitle}>About</Text>
-                    
+
                     <View style={styles.settingRow}>
                         <Text style={styles.settingLabel}>Version</Text>
-                        <Text style={styles.settingValue}>1.0.0</Text>
+                        <Text style={styles.settingValue}>2.0.0</Text>
                     </View>
 
                     <View style={styles.settingRow}>
                         <Text style={styles.settingLabel}>Build</Text>
-                        <Text style={styles.settingValue}>1</Text>
+                        <Text style={styles.settingValue}>2</Text>
                     </View>
 
                     <TouchableOpacity style={styles.settingRow} onPress={handleContactSupport}>
@@ -111,10 +231,10 @@ export default function SettingsScreen() {
                     </TouchableOpacity>
                 </View>
 
-                {/* Data Section */}
+                {/* ── Data Section ──────────────────────────────────────────── */}
                 <View style={styles.section}>
                     <Text style={styles.sectionTitle}>Data</Text>
-                    
+
                     <View style={styles.settingRow}>
                         <View style={styles.settingInfo}>
                             <Text style={styles.settingLabel}>Local Storage</Text>
@@ -125,36 +245,26 @@ export default function SettingsScreen() {
                         <Text style={styles.badge}>✓</Text>
                     </View>
 
-                    <TouchableOpacity
-                        style={styles.settingRow}
-                        onPress={handleClearData}
-                    >
+                    <TouchableOpacity style={styles.settingRow} onPress={handleClearData}>
                         <Text style={[styles.settingLabel, styles.dangerText]}>
                             Clear All Data
                         </Text>
                     </TouchableOpacity>
                 </View>
 
-                {/* Developer Section */}
+                {/* ── Developer Section ─────────────────────────────────────── */}
                 <View style={styles.section}>
                     <Text style={styles.sectionTitle}>Developer</Text>
-                    
-                    <TouchableOpacity
-                        style={styles.settingRow}
-                        onPress={handleResetOnboarding}
-                    >
+
+                    <TouchableOpacity style={styles.settingRow} onPress={handleResetOnboarding}>
                         <Text style={styles.settingLabel}>Reset Onboarding</Text>
                     </TouchableOpacity>
                 </View>
 
                 {/* Footer */}
                 <View style={styles.footer}>
-                    <Text style={styles.footerText}>
-                        Made with privacy in mind
-                    </Text>
-                    <Text style={styles.footerText}>
-                        © 2026 Veto
-                    </Text>
+                    <Text style={styles.footerText}>Made with privacy in mind</Text>
+                    <Text style={styles.footerText}>© 2026 Veto</Text>
                 </View>
             </ScrollView>
         </SafeAreaView>
@@ -200,6 +310,9 @@ const styles = StyleSheet.create({
         borderBottomWidth: 1,
         borderBottomColor: '#2C2C2E',
     },
+    settingRowDisabled: {
+        opacity: 0.5,
+    },
     settingInfo: {
         flex: 1,
         marginRight: 12,
@@ -228,6 +341,39 @@ const styles = StyleSheet.create({
     },
     dangerText: {
         color: '#FF3B30',
+    },
+    subtleText: {
+        color: '#8E8E93',
+    },
+    errorText: {
+        fontSize: 12,
+        color: '#FF3B30',
+        marginTop: 2,
+    },
+    updateBadge: {
+        backgroundColor: '#FF9F0A',
+        borderRadius: 8,
+        paddingHorizontal: 8,
+        paddingVertical: 3,
+    },
+    updateBadgeText: {
+        fontSize: 12,
+        fontWeight: '600',
+        color: '#000000',
+    },
+    infoBox: {
+        marginHorizontal: 20,
+        marginTop: 8,
+        padding: 12,
+        backgroundColor: '#1C1C1E',
+        borderRadius: 10,
+        borderLeftWidth: 3,
+        borderLeftColor: '#007AFF',
+    },
+    infoText: {
+        fontSize: 12,
+        color: '#8E8E93',
+        lineHeight: 18,
     },
     footer: {
         alignItems: 'center',

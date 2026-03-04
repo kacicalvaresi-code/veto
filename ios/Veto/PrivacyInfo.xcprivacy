@@ -27,14 +27,33 @@
                 <string>C617.1</string>
             </array>
         </dict>
-        <!-- UserDefaults: used to store sync timestamp and extension reload signal -->
+
+        <!-- UserDefaults: used to store sync timestamp, extension reload signal,
+             and screened-calls store in the App Group container -->
         <dict>
             <key>NSPrivacyAccessedAPIType</key>
             <string>NSPrivacyAccessedAPICategoryUserDefaults</string>
             <key>NSPrivacyAccessedAPITypeReasons</key>
             <array>
-                <!-- CA92.1: Access UserDefaults to store app-generated data (sync timestamps) -->
+                <!-- CA92.1: Access UserDefaults to store app-generated data
+                     (sync timestamps, screened call records, extension reload flags).
+                     All data is app-generated and stored locally on the device only. -->
                 <string>CA92.1</string>
+            </array>
+        </dict>
+
+        <!-- Speech Recognition: used for on-device voicemail transcription.
+             SFSpeechRecognizer is configured with requiresOnDeviceRecognition = true.
+             No audio or transcripts are sent to any server. -->
+        <dict>
+            <key>NSPrivacyAccessedAPIType</key>
+            <string>NSPrivacyAccessedAPICategorySpeechRecognition</string>
+            <key>NSPrivacyAccessedAPITypeReasons</key>
+            <array>
+                <!-- 1A: On-device speech recognition for app functionality
+                     (voicemail transcription for Smart Voicemail Screening feature).
+                     requiresOnDeviceRecognition is set to true; no data leaves the device. -->
+                <string>1A</string>
             </array>
         </dict>
     </array>
