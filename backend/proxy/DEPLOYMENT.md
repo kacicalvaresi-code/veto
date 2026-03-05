@@ -1,167 +1,224 @@
-## Veto Backend Proxy - Deployment Guide
+# Veto Backend — VPS Deployment Guide
 
-This guide provides instructions for deploying the Veto backend proxy server to a production environment using Docker.
+This document covers deploying the Veto backend proxy to the **Spaceship Starlight VPS** (`nan500`, `209.74.83.109`, Ubuntu 24.04) using **Node.js + PM2 + Nginx** — no Docker required.
+
+> **Docker alternative:** A `Dockerfile` is included in this directory if you prefer a containerised deployment. The PM2/Nginx approach below is recommended for the Spaceship VPS because it is simpler to maintain, uses less RAM, and gives you direct access to logs and the spam database files.
+
+---
+
+## Architecture Overview
+
+```
+iOS App (Expo)
+     │
+     │  HTTPS
+     ▼
+api.vetospam.app  ──►  Nginx (reverse proxy, SSL termination)
+                              │
+                              │  localhost:3000
+                              ▼
+                        Node.js (PM2 cluster, 2 workers)
+                              │
+                        /opt/veto/backend/proxy/
+                              ├── server.js          (Express app)
+                              ├── routes.js           (API endpoints)
+                              ├── spamBuilder.js      (FTC DNC pipeline)
+                              ├── ecosystem.config.js (PM2 config)
+                              └── data/
+                                  ├── spam_list.bin   (sorted binary)
+                                  └── spam_meta.json  (ETag metadata)
+```
+
+---
+
+## First-Time Setup
 
 ### Prerequisites
 
-- Docker installed on your server (VPS, cloud instance, etc.)
-- A registered domain name (e.g., `api.veto.app`)
-- A Call Control API key (sign up at https://www.callcontrol.com/developers/)
+- SSH access to `root@209.74.83.109`
+- The `api` DNS A record pointing to `209.74.83.109` (see Step 2 below)
+- Read access to `kacicalvaresi-code/veto` on GitHub
 
----
+### Step 1 — Run the Setup Script
 
-### Step 1: Clone the Repository
-
-```bash
-git clone https://github.com/kacicalvaresi-code/veto.git
-cd veto/backend/proxy
-```
-
----
-
-### Step 2: Configure Environment Variables
-
-Create a `.env` file in the `backend/proxy` directory:
+SSH into the VPS and run the one-shot setup script:
 
 ```bash
-cp .env.example .env
+ssh root@209.74.83.109
+bash <(curl -fsSL https://raw.githubusercontent.com/kacicalvaresi-code/veto/main/backend/proxy/scripts/setup-vps.sh)
 ```
 
-Then, edit the `.env` file with your production values:
+The script will:
+1. Install Node.js 22, PM2, Nginx, and Certbot
+2. Create the `/opt/veto` directory and a dedicated `veto` system user
+3. Clone the GitHub repository
+4. Install Node.js dependencies
+5. Prompt you for an optional Call Control API key
+6. Build the initial spam database from the FTC DNC CSV
+7. Install and enable the Nginx configuration
+8. Configure the UFW firewall (SSH + HTTP/HTTPS only)
+9. Start the Node.js server with PM2
+10. Configure PM2 to start automatically on reboot
 
-```ini
-# Veto Backend Proxy - Environment Configuration
+### Step 2 — Add DNS Record in Spaceship
 
-# Server Configuration
-PORT=3000
-NODE_ENV=production
+Log into [spaceship.com](https://spaceship.com) → Domains → `vetospam.app` → DNS Records.
 
-# Call Control API Configuration
-CALL_CONTROL_API_KEY=your_call_control_api_key_here
+Add the following record:
 
-# CORS Configuration (Your App's URL)
-ALLOWED_ORIGINS=https://veto.app
+| Type | Name | Value           | TTL |
+| :--- | :--- | :-------------- | :-- |
+| A    | api  | 209.74.83.109   | 300 |
 
-# Rate Limiting (Defaults are fine)
-RATE_LIMIT_WINDOW_MS=900000
-RATE_LIMIT_MAX_REQUESTS=100
+DNS propagation typically takes 2–5 minutes with a 300-second TTL.
 
-# Logging
-LOG_LEVEL=info
-```
+### Step 3 — Issue the SSL Certificate
 
----
-
-### Step 3: Build the Docker Image
+Once DNS has propagated, run Certbot on the VPS:
 
 ```bash
-docker build -t veto-proxy:latest .
+sudo certbot --nginx -d api.vetospam.app
 ```
 
----
+When prompted, choose **option 2** (redirect HTTP to HTTPS). Certbot will automatically update the Nginx configuration and schedule auto-renewal via a systemd timer.
 
-### Step 4: Run the Docker Container
+Verify the certificate is working:
 
 ```bash
-docker run -d \
-  --name veto-proxy \
-  --restart always \
-  -p 3000:3000 \
-  --env-file .env \
-  veto-proxy:latest
+curl https://api.vetospam.app/health
 ```
 
-**Explanation:**
-- `-d`: Run in detached mode (background)
-- `--name veto-proxy`: Assign a name to the container
-- `--restart always`: Automatically restart if it crashes
-- `-p 3000:3000`: Map port 3000 on the host to port 3000 in the container
-- `--env-file .env`: Load environment variables from your `.env` file
+You should receive a JSON response like:
 
----
-
-### Step 5: Verify Deployment
-
-Check the container logs:
-
-```bash
-docker logs veto-proxy
-```
-
-You should see:
-```
-🚀 Veto Proxy Server running on port 3000
-📝 Environment: production
-🔒 CORS enabled for: https://veto.app
-```
-
-Test the health check endpoint:
-
-```bash
-curl http://localhost:3000/health
-```
-
-You should see:
 ```json
 {
-  "status": "healthy",
-  "timestamp": "...",
-  "environment": "production"
+  "status": "ok",
+  "version": "2.0.0",
+  "spamListEntries": 847293,
+  "lastUpdated": "2026-03-05T02:00:00.000Z"
 }
 ```
 
----
+### Step 4 — Configure the Expo App
 
-### Step 6: Configure Reverse Proxy (Recommended)
-
-For production, you should use a reverse proxy like Nginx or Caddy to handle SSL termination and domain mapping.
-
-**Example Nginx Configuration:**
-
-```nginx
-server {
-    listen 80;
-    server_name api.veto.app;
-
-    location / {
-        return 301 https://$host$request_uri;
-    }
-}
-
-server {
-    listen 443 ssl;
-    server_name api.veto.app;
-
-    ssl_certificate /path/to/your/fullchain.pem;
-    ssl_certificate_key /path/to/your/privkey.pem;
-
-    location / {
-        proxy_pass http://localhost:3000;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-    }
-}
-```
-
----
-
-### Updating the Deployment
-
-To update the server with new code:
+Add the API URL to your Expo environment. For EAS Build, add it as a secret:
 
 ```bash
-# 1. Pull the latest code
-git pull origin main
-
-# 2. Stop and remove the old container
-docker stop veto-proxy
-docker rm veto-proxy
-
-# 3. Rebuild the image
-docker build -t veto-proxy:latest .
-
-# 4. Run the new container
-docker run -d --name veto-proxy --restart always -p 3000:3000 --env-file .env veto-proxy:latest
+eas secret:create --scope project --name EXPO_PUBLIC_PROXY_URL --value https://api.vetospam.app
 ```
+
+For local development, add it to `.env.local`:
+
+```
+EXPO_PUBLIC_PROXY_URL=https://api.vetospam.app
+```
+
+---
+
+## Updating After a Code Push
+
+After pushing changes to GitHub, update the VPS with zero downtime:
+
+```bash
+ssh root@209.74.83.109 "bash /opt/veto/backend/proxy/scripts/update.sh"
+```
+
+---
+
+## Environment Variables
+
+The `.env` file lives at `/opt/veto/backend/proxy/.env` (permissions `600`, owned by `veto`).
+
+| Variable | Required | Default | Description |
+| :--- | :--- | :--- | :--- |
+| `PORT` | No | `3000` | Port the Node.js server listens on |
+| `NODE_ENV` | No | `production` | Node environment |
+| `ALLOWED_ORIGINS` | No | `https://vetospam.app` | CORS allowed origins |
+| `RATE_LIMIT_WINDOW_MS` | No | `900000` | Rate limit window (15 min) |
+| `RATE_LIMIT_MAX_REQUESTS` | No | `100` | Max requests per window per IP |
+| `LOG_LEVEL` | No | `info` | Logging verbosity |
+| `CALL_CONTROL_API_KEY` | No | — | Optional real-time reputation API |
+
+To edit the `.env` file on the server:
+
+```bash
+ssh root@209.74.83.109
+nano /opt/veto/backend/proxy/.env
+pm2 reload veto-api
+```
+
+---
+
+## API Endpoints
+
+| Method | Path | Description |
+| :--- | :--- | :--- |
+| `GET` | `/health` | Server health, DB entry count, last updated |
+| `GET` | `/api/spam-list/meta` | Spam list metadata (ETag, count, timestamp) |
+| `GET` | `/api/spam-list/latest.bin` | Binary spam list download (ETag/304 support) |
+| `GET` | `/api/reputation/:phone` | Real-time reputation check for a phone number |
+| `POST` | `/api/report` | Submit an anonymous community spam report |
+
+---
+
+## Monitoring & Maintenance
+
+```bash
+# Live logs
+pm2 logs veto-api
+
+# Real-time CPU/RAM monitor
+pm2 monit
+
+# Server status
+pm2 list
+curl https://api.vetospam.app/health
+
+# Manually rebuild the spam database
+cd /opt/veto/backend/proxy && sudo -u veto node spamBuilder.js && pm2 reload veto-api
+
+# Nginx logs
+tail -f /var/log/nginx/veto-api-access.log
+tail -f /var/log/nginx/veto-api-error.log
+
+# SSL renewal test
+sudo certbot renew --dry-run
+```
+
+---
+
+## File Structure on the VPS
+
+```
+/opt/veto/                          ← Git repository root
+├── backend/
+│   └── proxy/
+│       ├── server.js
+│       ├── routes.js
+│       ├── spamBuilder.js
+│       ├── ecosystem.config.js
+│       ├── package.json
+│       ├── .env                    ← NOT in Git (secrets)
+│       ├── data/
+│       │   ├── spam_list.bin       ← Generated, NOT in Git
+│       │   └── spam_meta.json      ← Generated, NOT in Git
+│       ├── nginx/
+│       │   └── api.vetospam.app.conf
+│       └── scripts/
+│           ├── setup-vps.sh
+│           └── update.sh
+/var/log/veto/
+├── api-out.log
+└── api-error.log
+```
+
+---
+
+## Troubleshooting
+
+| Problem | Solution |
+| :--- | :--- |
+| Server won't start | `pm2 logs veto-api --lines 50` |
+| Nginx 502 Bad Gateway | `pm2 list` then `pm2 restart veto-api` |
+| SSL certificate errors | `sudo certbot renew --force-renewal` |
+| Spam database empty | `cd /opt/veto/backend/proxy && sudo -u veto node spamBuilder.js` |
