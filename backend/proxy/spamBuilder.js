@@ -4,8 +4,11 @@
  * Builds and maintains the Veto spam number database.
  *
  * Data sources (in priority order):
- *  1. FTC Do-Not-Call Reported Calls CSV  — public domain, updated weekdays
- *     https://www.ftc.gov/policy-notices/open-government/data-sets/do-not-call-data
+ *  1. FTC Do-Not-Call Reported Calls API — public domain, updated weekdays
+ *     https://www.ftc.gov/developer/api/v0/endpoints/do-not-call-dnc-reported-calls-data-api
+ *     NOTE: The old bulk CSV download (do-not-call-dnc-reported-calls-data.csv)
+ *     was removed by the FTC in 2024. The API is the official replacement.
+ *     We page through the last 30 days of complaints using the JSON API.
  *  2. Community reports stored locally in community_reports.json
  *
  * Output:
@@ -23,17 +26,18 @@ const fs      = require('fs');
 const path    = require('path');
 const https   = require('https');
 const http    = require('http');
-const { parse } = require('csv-parse/sync');
-
 const DATA_DIR          = path.join(__dirname, 'data');
 const SPAM_BIN_PATH     = path.join(DATA_DIR, 'spam_list.bin');
 const SPAM_META_PATH    = path.join(DATA_DIR, 'spam_meta.json');
 const COMMUNITY_PATH    = path.join(DATA_DIR, 'community_reports.json');
 
-// FTC publishes weekly CSV files.  The "last 30 days" aggregate is the most
-// useful signal because it captures the freshest reported numbers.
-const FTC_CSV_URL =
-  'https://www.ftc.gov/system/files/ftc_gov/csv/do-not-call-dnc-reported-calls-data.csv';
+// FTC DNC Complaints API — no API key required for basic access (DEMO_KEY works
+// for up to 30 requests/hour).  Set FTC_API_KEY in .env for higher rate limits.
+// Docs: https://www.ftc.gov/developer/api/v0/endpoints/do-not-call-dnc-reported-calls-data-api
+const FTC_API_BASE   = 'https://api.ftc.gov/v0/dnc-complaints';
+const FTC_API_KEY    = process.env.FTC_API_KEY || 'DEMO_KEY';
+const FTC_PAGE_LIMIT = 500;   // max records per API call
+const FTC_MAX_PAGES  = 200;   // cap at 100,000 records to avoid runaway fetches
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -42,42 +46,6 @@ function ensureDataDir() {
   if (!fs.existsSync(DATA_DIR)) {
     fs.mkdirSync(DATA_DIR, { recursive: true });
   }
-}
-
-/**
- * Downloads a URL to a local file path.
- * Follows up to 5 redirects.
- */
-function downloadFile(url, destPath, redirectCount = 0) {
-  return new Promise((resolve, reject) => {
-    if (redirectCount > 5) return reject(new Error('Too many redirects'));
-
-    const protocol = url.startsWith('https') ? https : http;
-    const file     = fs.createWriteStream(destPath);
-
-    protocol.get(url, (res) => {
-      // Handle redirects
-      if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
-        file.close();
-        fs.unlink(destPath, () => {});
-        return downloadFile(res.headers.location, destPath, redirectCount + 1)
-          .then(resolve)
-          .catch(reject);
-      }
-
-      if (res.statusCode !== 200) {
-        file.close();
-        fs.unlink(destPath, () => {});
-        return reject(new Error(`HTTP ${res.statusCode} for ${url}`));
-      }
-
-      res.pipe(file);
-      file.on('finish', () => file.close(resolve));
-    }).on('error', (err) => {
-      fs.unlink(destPath, () => {});
-      reject(err);
-    });
-  });
 }
 
 /**
@@ -102,41 +70,75 @@ function toE164Int(tenDigit) {
   return parseInt('1' + tenDigit, 10);
 }
 
-// ─── FTC CSV Fetch ────────────────────────────────────────────────────────────
+// ─── FTC API Fetch ───────────────────────────────────────────────────────────
 
+/**
+ * Fetches DNC complaint numbers from the FTC JSON API.
+ * Pages through results until no more data or FTC_MAX_PAGES is reached.
+ * Returns a Set of normalised 10-digit strings.
+ */
 async function fetchFtcNumbers() {
   ensureDataDir();
-  const tmpPath = path.join(DATA_DIR, 'ftc_dnc_tmp.csv');
-
-  console.log('[spamBuilder] Downloading FTC DNC CSV…');
-  try {
-    await downloadFile(FTC_CSV_URL, tmpPath);
-  } catch (err) {
-    console.warn(`[spamBuilder] FTC download failed: ${err.message}`);
-    // Return empty set — community reports will still be used
-    return new Set();
-  }
-
-  const raw     = fs.readFileSync(tmpPath, 'utf8');
-  const records = parse(raw, {
-    columns         : true,
-    skip_empty_lines: true,
-    relax_column_count: true,
-  });
-
   const numbers = new Set();
-  for (const row of records) {
-    // The FTC CSV column is named "Company Phone Number" or similar
-    const raw = row['Company Phone Number'] || row['company_phone_number'] || row['Phone Number'] || '';
-    const normalised = normalisePhone(raw);
-    if (normalised) numbers.add(normalised);
+  let page = 0;
+
+  console.log('[spamBuilder] Fetching FTC DNC complaints via API…');
+
+  while (page < FTC_MAX_PAGES) {
+    const offset = page * FTC_PAGE_LIMIT;
+    const url = `${FTC_API_BASE}?api_key=${FTC_API_KEY}&limit=${FTC_PAGE_LIMIT}&offset=${offset}`;
+
+    let body;
+    try {
+      body = await fetchJson(url);
+    } catch (err) {
+      console.warn(`[spamBuilder] FTC API fetch failed at page ${page}: ${err.message}`);
+      break;
+    }
+
+    const records = body && body.data ? body.data : [];
+    if (records.length === 0) break;
+
+    for (const record of records) {
+      const raw = record.attributes && record.attributes['company-phone-number'];
+      const normalised = normalisePhone(String(raw || ''));
+      if (normalised) numbers.add(normalised);
+    }
+
+    page++;
+
+    // Respect rate limits — small delay between pages
+    await new Promise(r => setTimeout(r, 150));
+
+    if (records.length < FTC_PAGE_LIMIT) break; // last page
   }
 
-  // Clean up temp file
-  try { fs.unlinkSync(tmpPath); } catch { /* ignore */ }
-
-  console.log(`[spamBuilder] FTC CSV parsed: ${numbers.size.toLocaleString()} unique numbers`);
+  console.log(`[spamBuilder] FTC API fetched: ${numbers.size.toLocaleString()} unique numbers (${page} pages)`);
   return numbers;
+}
+
+/**
+ * Fetches a JSON URL and returns the parsed body.
+ */
+function fetchJson(url) {
+  return new Promise((resolve, reject) => {
+    const protocol = url.startsWith('https') ? https : http;
+    protocol.get(url, { headers: { 'Accept': 'application/json' } }, (res) => {
+      if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
+        return fetchJson(res.headers.location).then(resolve).catch(reject);
+      }
+      if (res.statusCode !== 200) {
+        res.resume();
+        return reject(new Error(`HTTP ${res.statusCode} for ${url}`));
+      }
+      let raw = '';
+      res.on('data', chunk => { raw += chunk; });
+      res.on('end', () => {
+        try { resolve(JSON.parse(raw)); }
+        catch (e) { reject(new Error(`JSON parse error: ${e.message}`)); }
+      });
+    }).on('error', reject);
+  });
 }
 
 // ─── Community Reports ────────────────────────────────────────────────────────
