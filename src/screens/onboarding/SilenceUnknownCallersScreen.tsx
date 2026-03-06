@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, Linking, ScrollView, Switch } from 'react-native';
+import { View, Text, StyleSheet, Linking, ScrollView, Switch, TouchableOpacity } from 'react-native';
 import OnboardingScreen from '../../components/OnboardingScreen';
 import GradientButton from '../../components/GradientButton';
 import ProgressDots from '../../components/ProgressDots';
@@ -8,16 +8,33 @@ interface SilenceUnknownCallersScreenProps {
     onNext: () => void;
 }
 
+type ScreeningMode = 'ask' | 'silence';
+
 export default function SilenceUnknownCallersScreen({ onNext }: SilenceUnknownCallersScreenProps) {
     const [understood, setUnderstood] = useState(false);
+    const [mode, setMode] = useState<ScreeningMode>('ask');
 
     const handleOpenSettings = () => {
-        // Deep link directly to the Phone settings pane on iOS
         Linking.openURL('App-Prefs:root=Phone').catch(() => {
-            // Fallback to general settings if deep link fails
             Linking.openSettings();
         });
     };
+
+    const askSteps = [
+        { n: '1', text: <>Open <Text style={styles.bold}>Settings</Text></> },
+        { n: '2', text: <>Tap <Text style={styles.bold}>Phone</Text></> },
+        { n: '3', text: <>Tap <Text style={styles.bold}>Screen Unknown Callers</Text></> },
+        { n: '4', text: <>Select <Text style={styles.bold}>Ask Reason for Calling</Text></> },
+    ];
+
+    const silenceSteps = [
+        { n: '1', text: <>Open <Text style={styles.bold}>Settings</Text></> },
+        { n: '2', text: <>Tap <Text style={styles.bold}>Phone</Text></> },
+        { n: '3', text: <>Tap <Text style={styles.bold}>Screen Unknown Callers</Text></> },
+        { n: '4', text: <>Select <Text style={styles.bold}>Silence</Text></> },
+    ];
+
+    const steps = mode === 'ask' ? askSteps : silenceSteps;
 
     return (
         <OnboardingScreen backgroundImage={require('../../../assets/onboarding/settings.jpg')}>
@@ -36,40 +53,71 @@ export default function SilenceUnknownCallersScreen({ onNext }: SilenceUnknownCa
                 >
                     <Text style={styles.eyebrow}>Smart Screening</Text>
                     <Text style={styles.heading}>Screen Unknown Callers</Text>
-                    <Text style={styles.body}>
-                        Enable <Text style={styles.bold}>Screen Unknown Callers → Silence</Text> in iOS Settings.
-                        {'\n\n'}
-                        Calls from numbers not in your contacts will be silently sent to voicemail.
-                        Veto's AI will screen them and notify you — so real callers get through,
-                        and robocalls disappear.
-                    </Text>
+
+                    {/* Mode picker */}
+                    <View style={styles.modePicker}>
+                        <TouchableOpacity
+                            style={[styles.modeTab, mode === 'ask' && styles.modeTabActive]}
+                            onPress={() => setMode('ask')}
+                            activeOpacity={0.8}
+                        >
+                            <Text style={[styles.modeTabText, mode === 'ask' && styles.modeTabTextActive]}>
+                                Ask Reason ✓
+                            </Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                            style={[styles.modeTab, mode === 'silence' && styles.modeTabActive]}
+                            onPress={() => setMode('silence')}
+                            activeOpacity={0.8}
+                        >
+                            <Text style={[styles.modeTabText, mode === 'silence' && styles.modeTabTextActive]}>
+                                Silence All
+                            </Text>
+                        </TouchableOpacity>
+                    </View>
+
+                    {mode === 'ask' ? (
+                        <>
+                            <Text style={styles.body}>
+                                iOS will ask unknown callers to state their name and reason before your phone rings.
+                                Real callers — like a doctor's office or contractor — speak their reason and get through.
+                                Robocalls can't respond and go to voicemail, where{' '}
+                                <Text style={styles.bold}>Veto's on-device AI screens them for you.</Text>
+                            </Text>
+                            <View style={styles.noteCard}>
+                                <Text style={styles.noteIcon}>✅</Text>
+                                <Text style={styles.noteText}>
+                                    <Text style={styles.bold}>Recommended.</Text> You never miss a legitimate call,
+                                    and robocalls are still filtered automatically.
+                                </Text>
+                            </View>
+                        </>
+                    ) : (
+                        <>
+                            <Text style={styles.body}>
+                                All calls from numbers not in your contacts are silently sent to voicemail.
+                                Veto's AI screens every message on-device and notifies you — so you can decide
+                                whether to call back without ever being interrupted.
+                            </Text>
+                            <View style={styles.noteCard}>
+                                <Text style={styles.noteIcon}>⚠️</Text>
+                                <Text style={styles.noteText}>
+                                    <Text style={styles.bold}>Strictest mode.</Text> Legitimate unknown callers
+                                    (doctors, contractors) will also go to voicemail. Best for users who prefer
+                                    zero interruptions.
+                                </Text>
+                            </View>
+                        </>
+                    )}
 
                     <View style={styles.instructions}>
                         <Text style={styles.instructionTitle}>Steps:</Text>
-                        <View style={styles.step}>
-                            <Text style={styles.stepNumber}>1</Text>
-                            <Text style={styles.stepText}>Open <Text style={styles.bold}>Settings</Text></Text>
-                        </View>
-                        <View style={styles.step}>
-                            <Text style={styles.stepNumber}>2</Text>
-                            <Text style={styles.stepText}>Tap <Text style={styles.bold}>Phone</Text></Text>
-                        </View>
-                        <View style={styles.step}>
-                            <Text style={styles.stepNumber}>3</Text>
-                            <Text style={styles.stepText}>Tap <Text style={styles.bold}>Screen Unknown Callers</Text></Text>
-                        </View>
-                        <View style={styles.step}>
-                            <Text style={styles.stepNumber}>4</Text>
-                            <Text style={styles.stepText}>Select <Text style={styles.bold}>Silence</Text></Text>
-                        </View>
-                    </View>
-
-                    <View style={styles.noteCard}>
-                        <Text style={styles.noteIcon}>💡</Text>
-                        <Text style={styles.noteText}>
-                            Contacts, recent calls, and Siri suggestions always ring through — this only
-                            silences numbers you've never interacted with.
-                        </Text>
+                        {steps.map((step) => (
+                            <View style={styles.step} key={step.n}>
+                                <Text style={styles.stepNumber}>{step.n}</Text>
+                                <Text style={styles.stepText}>{step.text}</Text>
+                            </View>
+                        ))}
                     </View>
 
                     {/* Acknowledgement toggle */}
@@ -80,7 +128,9 @@ export default function SilenceUnknownCallersScreen({ onNext }: SilenceUnknownCa
                             trackColor={{ false: 'rgba(255,255,255,0.15)', true: '#4A90E2' }}
                             thumbColor={understood ? '#FFFFFF' : 'rgba(255,255,255,0.6)'}
                         />
-                        <Text style={styles.toggleLabel}>I've enabled Screen Unknown Callers</Text>
+                        <Text style={styles.toggleLabel}>
+                            I've set up Screen Unknown Callers
+                        </Text>
                     </View>
                 </ScrollView>
 
@@ -129,11 +179,37 @@ const styles = StyleSheet.create({
         color: '#FFFFFF',
         marginBottom: 16,
     },
+    modePicker: {
+        flexDirection: 'row',
+        backgroundColor: 'rgba(28, 28, 30, 0.6)',
+        borderRadius: 10,
+        padding: 4,
+        marginBottom: 16,
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.12)',
+    },
+    modeTab: {
+        flex: 1,
+        paddingVertical: 8,
+        borderRadius: 8,
+        alignItems: 'center',
+    },
+    modeTabActive: {
+        backgroundColor: '#4A90E2',
+    },
+    modeTabText: {
+        fontSize: 13,
+        fontWeight: '600',
+        color: 'rgba(255,255,255,0.5)',
+    },
+    modeTabTextActive: {
+        color: '#FFFFFF',
+    },
     body: {
-        fontSize: 16,
+        fontSize: 15,
         color: 'rgba(255, 255, 255, 0.85)',
-        lineHeight: 24,
-        marginBottom: 20,
+        lineHeight: 23,
+        marginBottom: 14,
     },
     bold: {
         fontWeight: '700',
@@ -175,6 +251,7 @@ const styles = StyleSheet.create({
     stepText: {
         fontSize: 15,
         color: 'rgba(255,255,255,0.9)',
+        flex: 1,
     },
     noteCard: {
         flexDirection: 'row',
@@ -183,7 +260,7 @@ const styles = StyleSheet.create({
         padding: 12,
         borderWidth: 1,
         borderColor: 'rgba(74, 144, 226, 0.3)',
-        marginBottom: 20,
+        marginBottom: 16,
         alignItems: 'flex-start',
     },
     noteIcon: {
