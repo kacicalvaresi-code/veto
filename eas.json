@@ -6,6 +6,9 @@
     "development": {
       "developmentClient": true,
       "distribution": "internal",
+      "env": {
+        "EXPO_PUBLIC_PROXY_URL": "https://api.vetospam.app"
+      },
       "ios": {
         "simulator": false,
         "buildConfiguration": "Debug"
@@ -18,6 +21,9 @@
     "preview": {
       "distribution": "internal",
       "credentialsSource": "local",
+      "env": {
+        "EXPO_PUBLIC_PROXY_URL": "https://api.vetospam.app"
+      },
       "ios": {
         "buildConfiguration": "Release"
       },
@@ -26,6 +32,9 @@
       }
     },
     "production": {
+      "env": {
+        "EXPO_PUBLIC_PROXY_URL": "https://api.vetospam.app"
+      },
       "ios": {
         "buildConfiguration": "Release"
       },

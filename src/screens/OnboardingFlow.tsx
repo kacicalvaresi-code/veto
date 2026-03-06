@@ -3,9 +3,13 @@ import { View, StyleSheet } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import WelcomeScreen from './onboarding/WelcomeScreen';
 import EnableBlockingScreen from './onboarding/EnableBlockingScreen';
+import SilenceUnknownCallersScreen from './onboarding/SilenceUnknownCallersScreen';
 import SuccessScreen from './onboarding/SuccessScreen';
 
 const ONBOARDING_COMPLETE_KEY = '@veto_onboarding_complete';
+
+// Total number of onboarding steps (used by ProgressDots)
+export const ONBOARDING_TOTAL_STEPS = 4;
 
 interface OnboardingFlowProps {
     onComplete: () => void;
@@ -15,7 +19,7 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
     const [currentScreen, setCurrentScreen] = useState(0);
 
     const handleNext = () => {
-        if (currentScreen < 2) {
+        if (currentScreen < ONBOARDING_TOTAL_STEPS - 1) {
             setCurrentScreen(currentScreen + 1);
         } else {
             completeOnboarding();
@@ -45,6 +49,9 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
                 <EnableBlockingScreen onNext={handleNext} />
             )}
             {currentScreen === 2 && (
+                <SilenceUnknownCallersScreen onNext={handleNext} />
+            )}
+            {currentScreen === 3 && (
                 <SuccessScreen onFinish={completeOnboarding} />
             )}
         </View>

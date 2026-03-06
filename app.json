@@ -17,10 +17,12 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.kacicalvaresi.veto",
-      "buildNumber": "1",
+      "buildNumber": "2",
       "infoPlist": {
         "NSUserTrackingUsageDescription": "This app does not track you. This permission is not used.",
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSSpeechRecognitionUsageDescription": "Veto uses on-device speech recognition to transcribe voicemails from unknown callers. Transcripts are processed locally and never leave your device.",
+        "NSMicrophoneUsageDescription": "Veto needs microphone access to transcribe voicemails from unknown callers for spam screening. Audio is processed on-device only."
       }
     },
     "android": {
@@ -29,10 +31,12 @@
         "backgroundColor": "#2C3E50"
       },
       "package": "com.kacicalvaresi.veto",
-      "versionCode": 1,
+      "versionCode": 2,
       "permissions": [
         "READ_PHONE_STATE",
-        "CALL_PHONE"
+        "CALL_PHONE",
+        "RECEIVE_BOOT_COMPLETED",
+        "VIBRATE"
       ]
     },
     "web": {
@@ -43,7 +47,16 @@
       "./plugins/withCallScreeningService",
       "./plugins/withAppGroup",
       "./plugins/withSMSFilter",
-      "./plugins/withActionExtension"
+      "./plugins/withActionExtension",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/notification-icon.png",
+          "color": "#4A90E2",
+          "sounds": [],
+          "iosDisplayInForeground": true
+        }
+      ]
     ],
     "scheme": "veto",
     "description": "Block spam calls with zero data collection. Privacy-first spam call blocker that keeps all your data on your device.",
