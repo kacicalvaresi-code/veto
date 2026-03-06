@@ -5,7 +5,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>Report to Veto</string>
+	<string>Screen with Veto</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -25,12 +25,23 @@
 		<key>NSExtensionAttributes</key>
 		<dict>
 			<key>NSExtensionActivationRule</key>
-			<string>TRUEPREDICATE</string>
+			<dict>
+				<key>NSExtensionActivationSupportsText</key>
+				<true/>
+				<key>NSExtensionActivationSupportsFileWithMaxCount</key>
+				<integer>1</integer>
+				<key>NSExtensionActivationDeclaredContentTypes</key>
+				<array>
+					<string>public.audio</string>
+					<string>com.apple.m4a-audio</string>
+					<string>public.mpeg-4-audio</string>
+					<string>com.apple.coreaudio-format</string>
+					<string>public.plain-text</string>
+				</array>
+			</dict>
             <key>NSExtensionServiceAllowsFinderPreviewItem</key>
             <true/>
             <key>NSExtensionServiceAllowsTouchBarItem</key>
-            <true/>
-            <key>NSExtensionActivationSupportsText</key>
             <true/>
 		</dict>
 		<key>NSExtensionPointIdentifier</key>
