@@ -13,7 +13,7 @@
       "ios": {
         "simulator": false,
         "buildConfiguration": "Debug",
-        "image": "latest"
+        "image": "macos-sonoma-14.6-xcode-16.0"
       },
       "android": {
         "buildType": "apk",
@@ -28,7 +28,7 @@
       },
       "ios": {
         "buildConfiguration": "Release",
-        "image": "latest"
+        "image": "macos-sonoma-14.6-xcode-16.0"
       },
       "android": {
         "buildType": "apk"
@@ -40,7 +40,7 @@
       },
       "ios": {
         "buildConfiguration": "Release",
-        "image": "latest"
+        "image": "macos-sonoma-14.6-xcode-16.0"
       },
       "android": {
         "buildType": "app-bundle"

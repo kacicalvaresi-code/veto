@@ -33,7 +33,7 @@
       </dict>
     </array>
     <key>CFBundleVersion</key>
-    <string>1</string>
+    <string>3</string>
     <key>ITSAppUsesNonExemptEncryption</key>
     <false/>
     <key>LSRequiresIPhoneOS</key>
@@ -51,6 +51,8 @@
     <string>Veto uses on-device speech recognition to transcribe voicemails from unknown callers. All transcription happens entirely on your device — no audio or text is ever sent to any server.</string>
     <key>NSMicrophoneUsageDescription</key>
     <string>Veto uses the microphone only to transcribe voicemails you choose to analyse. No audio is recorded without your action.</string>
+    <key>NSPhotoLibraryUsageDescription</key>
+    <string>Veto does not access your photo library. This permission is not used by the app.</string>
     <key>UILaunchStoryboardName</key>
     <string>SplashScreen</string>
     <key>UIRequiredDeviceCapabilities</key>

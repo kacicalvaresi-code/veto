@@ -17,12 +17,13 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.kacicalvaresi.veto",
-      "buildNumber": "2",
+      "buildNumber": "3",
       "infoPlist": {
         "NSUserTrackingUsageDescription": "This app does not track you. This permission is not used.",
         "ITSAppUsesNonExemptEncryption": false,
         "NSSpeechRecognitionUsageDescription": "Veto uses on-device speech recognition to transcribe voicemails from unknown callers. Transcripts are processed locally and never leave your device.",
-        "NSMicrophoneUsageDescription": "Veto needs microphone access to transcribe voicemails from unknown callers for spam screening. Audio is processed on-device only."
+        "NSMicrophoneUsageDescription": "Veto needs microphone access to transcribe voicemails from unknown callers for spam screening. Audio is processed on-device only.",
+        "NSPhotoLibraryUsageDescription": "Veto does not access your photo library. This permission is not used by the app."
       }
     },
     "android": {
