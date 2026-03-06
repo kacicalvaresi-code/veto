@@ -317,7 +317,7 @@ export default function ScreenedCallsScreen() {
                         the original call.
                     </Text>
                     <View style={styles.emptySteps}>
-                        <Text style={styles.emptyStep}>1. Enable "Silence Unknown Callers" in iOS Settings → Phone</Text>
+                        <Text style={styles.emptyStep}>1. Enable "Screen Unknown Callers → Silence" in iOS Settings → Phone</Text>
                         <Text style={styles.emptyStep}>2. Unknown callers go straight to voicemail</Text>
                         <Text style={styles.emptyStep}>3. Veto analyses the message on-device</Text>
                         <Text style={styles.emptyStep}>4. You see a summary and decide what to do</Text>

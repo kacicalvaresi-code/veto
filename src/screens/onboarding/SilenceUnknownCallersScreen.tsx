@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, Linking, Platform, Switch } from 'react-native';
+import { View, Text, StyleSheet, Linking, ScrollView, Switch } from 'react-native';
 import OnboardingScreen from '../../components/OnboardingScreen';
 import GradientButton from '../../components/GradientButton';
 import ProgressDots from '../../components/ProgressDots';
@@ -27,12 +27,17 @@ export default function SilenceUnknownCallersScreen({ onNext }: SilenceUnknownCa
                     <ProgressDots total={5} current={2} />
                 </View>
 
-                {/* Content */}
-                <View style={styles.content}>
+                {/* Scrollable Content */}
+                <ScrollView
+                    style={styles.scrollView}
+                    contentContainerStyle={styles.scrollContent}
+                    showsVerticalScrollIndicator={false}
+                    keyboardShouldPersistTaps="handled"
+                >
                     <Text style={styles.eyebrow}>Smart Screening</Text>
                     <Text style={styles.heading}>Screen Unknown Callers</Text>
                     <Text style={styles.body}>
-                        Enable <Text style={styles.bold}>Silence Unknown Callers</Text> in iOS Settings.
+                        Enable <Text style={styles.bold}>Screen Unknown Callers → Silence</Text> in iOS Settings.
                         {'\n\n'}
                         Calls from numbers not in your contacts will be silently sent to voicemail.
                         Veto's AI will screen them and notify you — so real callers get through,
@@ -51,7 +56,11 @@ export default function SilenceUnknownCallersScreen({ onNext }: SilenceUnknownCa
                         </View>
                         <View style={styles.step}>
                             <Text style={styles.stepNumber}>3</Text>
-                            <Text style={styles.stepText}>Enable <Text style={styles.bold}>Silence Unknown Callers</Text></Text>
+                            <Text style={styles.stepText}>Tap <Text style={styles.bold}>Screen Unknown Callers</Text></Text>
+                        </View>
+                        <View style={styles.step}>
+                            <Text style={styles.stepNumber}>4</Text>
+                            <Text style={styles.stepText}>Select <Text style={styles.bold}>Silence</Text></Text>
                         </View>
                     </View>
 
@@ -71,11 +80,11 @@ export default function SilenceUnknownCallersScreen({ onNext }: SilenceUnknownCa
                             trackColor={{ false: 'rgba(255,255,255,0.15)', true: '#4A90E2' }}
                             thumbColor={understood ? '#FFFFFF' : 'rgba(255,255,255,0.6)'}
                         />
-                        <Text style={styles.toggleLabel}>I've enabled Silence Unknown Callers</Text>
+                        <Text style={styles.toggleLabel}>I've enabled Screen Unknown Callers</Text>
                     </View>
-                </View>
+                </ScrollView>
 
-                {/* Actions */}
+                {/* Actions — always visible at the bottom */}
                 <View style={styles.actions}>
                     <GradientButton title="Open Phone Settings" onPress={handleOpenSettings} />
                     <View style={styles.secondaryButton}>
@@ -99,10 +108,12 @@ const styles = StyleSheet.create({
         paddingTop: 20,
         alignItems: 'center',
     },
-    content: {
+    scrollView: {
         flex: 1,
-        justifyContent: 'center',
-        paddingBottom: 20,
+    },
+    scrollContent: {
+        paddingTop: 16,
+        paddingBottom: 16,
     },
     eyebrow: {
         fontSize: 12,
@@ -190,6 +201,7 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         gap: 12,
+        paddingBottom: 8,
     },
     toggleLabel: {
         flex: 1,
@@ -198,6 +210,7 @@ const styles = StyleSheet.create({
     },
     actions: {
         paddingBottom: 32,
+        paddingTop: 8,
     },
     secondaryButton: {
         marginTop: 12,
