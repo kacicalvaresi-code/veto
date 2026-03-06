@@ -1,6 +1,7 @@
 {
   "cli": {
-    "version": ">= 5.0.0"
+    "version": ">= 5.0.0",
+    "appVersionSource": "local"
   },
   "build": {
     "development": {
@@ -11,7 +12,8 @@
       },
       "ios": {
         "simulator": false,
-        "buildConfiguration": "Debug"
+        "buildConfiguration": "Debug",
+        "image": "latest"
       },
       "android": {
         "buildType": "apk",
@@ -20,12 +22,13 @@
     },
     "preview": {
       "distribution": "internal",
-      "credentialsSource": "local",
+      "credentialsSource": "remote",
       "env": {
         "EXPO_PUBLIC_PROXY_URL": "https://api.vetospam.app"
       },
       "ios": {
-        "buildConfiguration": "Release"
+        "buildConfiguration": "Release",
+        "image": "latest"
       },
       "android": {
         "buildType": "apk"
@@ -36,7 +39,8 @@
         "EXPO_PUBLIC_PROXY_URL": "https://api.vetospam.app"
       },
       "ios": {
-        "buildConfiguration": "Release"
+        "buildConfiguration": "Release",
+        "image": "latest"
       },
       "android": {
         "buildType": "app-bundle"
@@ -46,9 +50,16 @@
   "submit": {
     "production": {
       "ios": {
-        "appleId": "YOUR_APPLE_ID@example.com",
-        "ascAppId": "YOUR_APP_STORE_CONNECT_APP_ID",
-        "appleTeamId": "YOUR_APPLE_TEAM_ID"
+        "appleId": "kcalvaresi@gmail.com",
+        "ascAppId": "6759989634",
+        "appleTeamId": "3D2Y23S825"
+      }
+    },
+    "preview": {
+      "ios": {
+        "appleId": "kcalvaresi@gmail.com",
+        "ascAppId": "6759989634",
+        "appleTeamId": "3D2Y23S825"
       }
     }
   }
