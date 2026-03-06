@@ -36,8 +36,8 @@ const COMMUNITY_PATH    = path.join(DATA_DIR, 'community_reports.json');
 // Docs: https://www.ftc.gov/developer/api/v0/endpoints/do-not-call-dnc-reported-calls-data-api
 const FTC_API_BASE   = 'https://api.ftc.gov/v0/dnc-complaints';
 const FTC_API_KEY    = process.env.FTC_API_KEY || 'DEMO_KEY';
-const FTC_PAGE_LIMIT = 500;   // max records per API call
-const FTC_MAX_PAGES  = 200;   // cap at 100,000 records to avoid runaway fetches
+const FTC_PAGE_LIMIT = 50;    // FTC API hard cap: 50 records per page
+const FTC_MAX_PAGES  = 2000;  // cap at 100,000 records (2000 pages × 50)
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
