@@ -4,20 +4,23 @@ import MessageUI
 import Speech
 import NaturalLanguage
 import UniformTypeIdentifiers
+import AVFoundation
 
 // MARK: - ActionViewController
 //
 // Veto's Action Extension handles two share-sheet scenarios:
 //
-//  1. VOICEMAIL AUDIO (from Phone app → Share → Veto)
+//  1. VOICEMAIL AUDIO (from Phone app -> Share -> Veto)
 //     - Accepts public.audio / com.apple.m4a-audio files
-//     - Transcribes on-device using SFSpeechRecognizer
-//     - Classifies transcript using keyword NLP
+//     - Measures audio duration to detect pre-recorded robocall patterns
+//     - Transcribes on-device using SFSpeechRecognizer with partial results
+//     - Tracks transcript delivery timing to detect machine-speed playback
+//     - Classifies transcript using keyword NLP + timing signals
 //     - Saves result to App Group container
 //     - Shows verdict screen (Spam / Likely Spam / Legit / Unknown)
 //     - Offers "Block this number" and "Dismiss" actions
 //
-//  2. SPAM TEXT (from Messages app → Share → Report to Veto)
+//  2. SPAM TEXT (from Messages app -> Share -> Report to Veto)
 //     - Accepts plain text
 //     - Opens SMS composer pre-filled to 7726 (carrier spam shortcode)
 //     - After sending, adds the sender to the Veto blocklist automatically
@@ -35,6 +38,10 @@ class ActionViewController: UIViewController, MFMessageComposeViewControllerDele
     private var detectedSender: String? = nil
     private var audioFileURL: URL?      = nil
 
+    // MARK: - Timing Analysis State
+    private var transcriptionStartTime: Date?
+    private var partialResultTimestamps: [(Date, Int)] = []
+
     // MARK: - UI
     private let containerView   = UIView()
     private let iconLabel       = UILabel()
@@ -49,7 +56,7 @@ class ActionViewController: UIViewController, MFMessageComposeViewControllerDele
     override func viewDidLoad() {
         super.viewDidLoad()
         setupUI()
-        showLoading(message: "Analysing…")
+        showLoading(message: "Analysing...")
         processInputItems()
     }
 
@@ -64,7 +71,6 @@ class ActionViewController: UIViewController, MFMessageComposeViewControllerDele
         for item in items {
             guard let attachments = item.attachments else { continue }
             for provider in attachments {
-                // Audio file (voicemail)
                 let audioTypes = [
                     kUTTypeAudio as String,
                     "com.apple.m4a-audio",
@@ -87,7 +93,6 @@ class ActionViewController: UIViewController, MFMessageComposeViewControllerDele
                     }
                 }
 
-                // Plain text (spam SMS report)
                 if provider.hasItemConformingToTypeIdentifier(kUTTypePlainText as String) {
                     provider.loadItem(forTypeIdentifier: kUTTypePlainText as String, options: nil) { [weak self] item, error in
                         DispatchQueue.main.async {
@@ -120,10 +125,23 @@ class ActionViewController: UIViewController, MFMessageComposeViewControllerDele
         return nil
     }
 
+    // MARK: - Audio Duration
+
+    private func getAudioDuration(url: URL) -> TimeInterval? {
+        do {
+            let player = try AVAudioPlayer(contentsOf: url)
+            return player.duration
+        } catch {
+            let asset = AVURLAsset(url: url)
+            let duration = CMTimeGetSeconds(asset.duration)
+            return duration > 0 ? duration : nil
+        }
+    }
+
     // MARK: - Voicemail Audio Handler
 
     private func handleAudioFile(url: URL, senderInfo: String?) {
-        showLoading(message: "Transcribing voicemail…\nThis takes a few seconds.")
+        showLoading(message: "Transcribing voicemail...\nThis takes a few seconds.")
 
         guard let containerURL = FileManager.default
             .containerURL(forSecurityApplicationGroupIdentifier: appGroupID) else {
@@ -152,61 +170,106 @@ class ActionViewController: UIViewController, MFMessageComposeViewControllerDele
         SFSpeechRecognizer.requestAuthorization { [weak self] status in
             DispatchQueue.main.async {
                 guard status == .authorized else {
-                    self?.showError("Speech recognition permission is required.\n\nGo to Settings → Veto → Speech Recognition to enable it.")
+                    self?.showError("Speech recognition permission is required.\n\nGo to Settings -> Veto -> Speech Recognition to enable it.")
                     return
                 }
-                self?.transcribeAndClassify(audioURL: destURL, senderInfo: senderInfo)
+                self?.transcribeWithTimingAnalysis(audioURL: destURL, senderInfo: senderInfo)
             }
         }
     }
 
-    private func transcribeAndClassify(audioURL: URL, senderInfo: String?) {
+    // MARK: - Transcription with Timing Analysis
+
+    private func transcribeWithTimingAnalysis(audioURL: URL, senderInfo: String?) {
         guard let recognizer = SFSpeechRecognizer(locale: Locale(identifier: "en-US")),
               recognizer.isAvailable else {
             showError("On-device speech recognition is not available right now.")
             return
         }
 
+        let audioDuration = getAudioDuration(url: audioURL)
+
+        transcriptionStartTime = Date()
+        partialResultTimestamps = []
+
         let request = SFSpeechURLRecognitionRequest(url: audioURL)
         request.requiresOnDeviceRecognition = true
-        request.shouldReportPartialResults  = false
+        request.shouldReportPartialResults  = true
 
         recognizer.recognitionTask(with: request) { [weak self] result, error in
-            DispatchQueue.main.async {
-                if error != nil {
-                    self?.transcribeWithNetworkFallback(audioURL: audioURL, senderInfo: senderInfo)
-                    return
+            guard let self else { return }
+
+            if error != nil {
+                DispatchQueue.main.async {
+                    self.transcribeWithNetworkFallback(audioURL: audioURL, audioDuration: audioDuration, senderInfo: senderInfo)
                 }
-                guard let result, result.isFinal else { return }
-                let transcript = result.bestTranscription.formattedString
-                let analysis   = VetoClassifier.classify(transcript: transcript)
-                self?.saveAndShowResult(transcript: transcript, analysis: analysis, senderInfo: senderInfo)
+                return
+            }
+
+            guard let result else { return }
+
+            let currentText = result.bestTranscription.formattedString
+            let wordCount   = currentText.split(separator: " ").count
+
+            self.partialResultTimestamps.append((Date(), wordCount))
+
+            if result.isFinal {
+                let timingData = VetoClassifier.TimingData(
+                    audioDurationSeconds: audioDuration,
+                    transcriptionStartTime: self.transcriptionStartTime ?? Date(),
+                    partialResultTimestamps: self.partialResultTimestamps
+                )
+                let analysis = VetoClassifier.classify(transcript: currentText, timing: timingData)
+                DispatchQueue.main.async {
+                    self.saveAndShowResult(transcript: currentText, analysis: analysis, senderInfo: senderInfo)
+                }
             }
         }
     }
 
-    private func transcribeWithNetworkFallback(audioURL: URL, senderInfo: String?) {
+    private func transcribeWithNetworkFallback(audioURL: URL, audioDuration: TimeInterval?, senderInfo: String?) {
         guard let recognizer = SFSpeechRecognizer(locale: Locale(identifier: "en-US")),
               recognizer.isAvailable else {
-            let silentAnalysis = VetoClassifier.classify(transcript: "")
+            let timingData = VetoClassifier.TimingData(audioDurationSeconds: audioDuration, transcriptionStartTime: Date(), partialResultTimestamps: [])
+            let silentAnalysis = VetoClassifier.classify(transcript: "", timing: timingData)
             saveAndShowResult(transcript: "", analysis: silentAnalysis, senderInfo: senderInfo)
             return
         }
 
+        transcriptionStartTime = Date()
+        partialResultTimestamps = []
+
         let request = SFSpeechURLRecognitionRequest(url: audioURL)
-        request.shouldReportPartialResults = false
+        request.shouldReportPartialResults = true
 
         recognizer.recognitionTask(with: request) { [weak self] result, error in
-            DispatchQueue.main.async {
-                if error != nil {
-                    let silentAnalysis = VetoClassifier.classify(transcript: "")
-                    self?.saveAndShowResult(transcript: "", analysis: silentAnalysis, senderInfo: senderInfo)
-                    return
+            guard let self else { return }
+
+            if error != nil {
+                DispatchQueue.main.async {
+                    let timingData = VetoClassifier.TimingData(audioDurationSeconds: audioDuration, transcriptionStartTime: Date(), partialResultTimestamps: [])
+                    let silentAnalysis = VetoClassifier.classify(transcript: "", timing: timingData)
+                    self.saveAndShowResult(transcript: "", analysis: silentAnalysis, senderInfo: senderInfo)
                 }
-                guard let result, result.isFinal else { return }
-                let transcript = result.bestTranscription.formattedString
-                let analysis   = VetoClassifier.classify(transcript: transcript)
-                self?.saveAndShowResult(transcript: transcript, analysis: analysis, senderInfo: senderInfo)
+                return
+            }
+
+            guard let result else { return }
+
+            let currentText = result.bestTranscription.formattedString
+            let wordCount   = currentText.split(separator: " ").count
+            self.partialResultTimestamps.append((Date(), wordCount))
+
+            if result.isFinal {
+                let timingData = VetoClassifier.TimingData(
+                    audioDurationSeconds: audioDuration,
+                    transcriptionStartTime: self.transcriptionStartTime ?? Date(),
+                    partialResultTimestamps: self.partialResultTimestamps
+                )
+                let analysis = VetoClassifier.classify(transcript: currentText, timing: timingData)
+                DispatchQueue.main.async {
+                    self.saveAndShowResult(transcript: currentText, analysis: analysis, senderInfo: senderInfo)
+                }
             }
         }
     }
@@ -226,6 +289,8 @@ class ActionViewController: UIViewController, MFMessageComposeViewControllerDele
                     "confidence"     : analysis.confidence,
                     "detectedIntent" : analysis.intent,
                     "keywords"       : analysis.keywords,
+                    "isPreRecorded"  : analysis.isPreRecorded,
+                    "wordsPerSecond" : analysis.wordsPerSecond ?? 0,
                 ]
             ]
             calls.insert(record, at: 0)
@@ -240,7 +305,7 @@ class ActionViewController: UIViewController, MFMessageComposeViewControllerDele
 
     private func handleSpamText(body: String, senderInfo: String?) {
         detectedSender = senderInfo
-        showLoading(message: "Preparing report…")
+        showLoading(message: "Preparing report...")
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in
             self?.presentSMSComposer(body: body)
         }
@@ -312,30 +377,45 @@ class ActionViewController: UIViewController, MFMessageComposeViewControllerDele
         activitySpinner.stopAnimating()
         activitySpinner.isHidden = true
 
-        switch analysis.classification {
-        case "spam":
-            iconLabel.text     = "🚫"
-            titleLabel.text    = "Spam Call Detected"
+        if analysis.isPreRecorded {
+            iconLabel.text     = "\u{1F916}"
+            titleLabel.text    = "Robocall Detected"
             titleLabel.textColor = UIColor(red: 1.0, green: 0.23, blue: 0.19, alpha: 1)
-        case "likely_spam":
-            iconLabel.text     = "⚠️"
-            titleLabel.text    = "Possible Spam"
-            titleLabel.textColor = UIColor(red: 1.0, green: 0.62, blue: 0.04, alpha: 1)
-        case "legitimate":
-            iconLabel.text     = "✅"
-            titleLabel.text    = "Looks Legitimate"
-            titleLabel.textColor = UIColor(red: 0.20, green: 0.78, blue: 0.35, alpha: 1)
-        default:
-            iconLabel.text     = "❓"
-            titleLabel.text    = "Unknown Caller"
-            titleLabel.textColor = UIColor.secondaryLabel
+        } else {
+            switch analysis.classification {
+            case "spam":
+                iconLabel.text     = "\u{1F6AB}"
+                titleLabel.text    = "Spam Call Detected"
+                titleLabel.textColor = UIColor(red: 1.0, green: 0.23, blue: 0.19, alpha: 1)
+            case "likely_spam":
+                iconLabel.text     = "\u{26A0}\u{FE0F}"
+                titleLabel.text    = "Possible Spam"
+                titleLabel.textColor = UIColor(red: 1.0, green: 0.62, blue: 0.04, alpha: 1)
+            case "legitimate":
+                iconLabel.text     = "\u{2705}"
+                titleLabel.text    = "Looks Legitimate"
+                titleLabel.textColor = UIColor(red: 0.20, green: 0.78, blue: 0.35, alpha: 1)
+            default:
+                iconLabel.text     = "\u{2753}"
+                titleLabel.text    = "Unknown Caller"
+                titleLabel.textColor = UIColor.secondaryLabel
+            }
         }
 
-        let callerDisplay   = senderInfo ?? "Unknown number"
+        let callerDisplay     = senderInfo ?? "Unknown number"
         let transcriptPreview = analysis.transcript.isEmpty ? "No message left." : String(analysis.transcript.prefix(140))
-        subtitleLabel.text  = "\(callerDisplay)\n\n\"\(transcriptPreview)\"\n\nConfidence: \(Int(analysis.confidence * 100))%"
 
-        if analysis.classification == "spam" || analysis.classification == "likely_spam", senderInfo != nil {
+        var detailLines = ["\(callerDisplay)", "\"\(transcriptPreview)\""]
+        if analysis.isPreRecorded {
+            detailLines.append("\u{26A1} Pre-recorded message detected")
+        }
+        if let wps = analysis.wordsPerSecond {
+            detailLines.append(String(format: "Speech rate: %.1f words/sec", wps))
+        }
+        detailLines.append("Confidence: \(Int(analysis.confidence * 100))%")
+        subtitleLabel.text = detailLines.joined(separator: "\n\n")
+
+        if analysis.classification == "spam" || analysis.classification == "likely_spam" || analysis.isPreRecorded, senderInfo != nil {
             primaryButton.setTitle("Block This Number", for: .normal)
             primaryButton.backgroundColor = UIColor(red: 1.0, green: 0.23, blue: 0.19, alpha: 1)
             primaryButton.isHidden = false
@@ -354,7 +434,7 @@ class ActionViewController: UIViewController, MFMessageComposeViewControllerDele
     private func showSMSReportedScreen() {
         activitySpinner.stopAnimating()
         activitySpinner.isHidden = true
-        iconLabel.text     = "✅"
+        iconLabel.text     = "\u{2705}"
         titleLabel.text    = "Reported to Carrier"
         titleLabel.textColor = UIColor(red: 0.20, green: 0.78, blue: 0.35, alpha: 1)
         if let sender = detectedSender {
@@ -398,7 +478,7 @@ class ActionViewController: UIViewController, MFMessageComposeViewControllerDele
     private func showError(_ message: String) {
         activitySpinner.stopAnimating()
         activitySpinner.isHidden = true
-        iconLabel.text     = "⚠️"
+        iconLabel.text     = "\u{26A0}\u{FE0F}"
         titleLabel.text    = "Unable to Screen"
         titleLabel.textColor = .label
         subtitleLabel.text = message
@@ -492,8 +572,22 @@ class ActionViewController: UIViewController, MFMessageComposeViewControllerDele
 }
 
 // MARK: - VetoClassifier
+//
+// On-device NLP classifier with pre-recorded voicemail timing detection.
+// Analyses both transcript content AND delivery timing to identify robocalls.
 
 struct VetoClassifier {
+
+    // MARK: - Timing Data
+
+    struct TimingData {
+        let audioDurationSeconds: TimeInterval?
+        let transcriptionStartTime: Date
+        let partialResultTimestamps: [(Date, Int)]  // (timestamp, cumulative word count)
+    }
+
+    // MARK: - Analysis Result
+
     struct Analysis {
         let transcript     : String
         let summary        : String
@@ -501,15 +595,101 @@ struct VetoClassifier {
         let confidence     : Double
         let intent         : String
         let keywords       : [String]
+        let isPreRecorded  : Bool
+        let wordsPerSecond : Double?
     }
 
-    static func classify(transcript: String) -> Analysis {
+    // MARK: - Pre-Recorded Detection
+    //
+    // A pre-recorded robocall voicemail has two distinctive timing signatures:
+    //
+    // 1. HIGH WORDS-PER-SECOND RATIO
+    //    Pre-recorded messages are densely packed -- typically 3.0+ words/sec.
+    //    Human callers average 1.5-2.2 words/sec with natural pauses, "ums",
+    //    and hesitations. A voicemail with 3.0+ wps is almost certainly pre-recorded.
+    //
+    // 2. RAPID TRANSCRIPT SATURATION
+    //    When SFSpeechRecognizer processes a pre-recorded message, the partial
+    //    results arrive in large chunks because the audio has no natural pauses.
+    //    For a human caller, the transcript builds gradually over many callbacks.
+    //    If 75%+ of the final word count arrives within the first 25% of callbacks,
+    //    the message is likely pre-recorded.
+    //
+    // 3. ABSENCE OF FILLER WORDS
+    //    Pre-recorded messages lack natural speech fillers (um, uh, hmm, like).
+    //    A long message with zero fillers is an additional signal.
+
+    static func detectPreRecorded(transcript: String, timing: TimingData?) -> (isPreRecorded: Bool, wordsPerSecond: Double?, preRecordedConfidence: Double) {
+        guard let timing else {
+            return (false, nil, 0)
+        }
+
+        let wordCount = transcript.split(separator: " ").count
+        guard wordCount >= 5 else {
+            return (false, nil, 0)
+        }
+
+        var signals = 0.0
+        var wps: Double? = nil
+
+        // Signal 1: Words per second of audio
+        if let duration = timing.audioDurationSeconds, duration > 0 {
+            let wordsPerSec = Double(wordCount) / duration
+            wps = wordsPerSec
+
+            if wordsPerSec >= 3.5 {
+                signals += 0.95
+            } else if wordsPerSec >= 3.0 {
+                signals += 0.75
+            } else if wordsPerSec >= 2.5 {
+                signals += 0.40
+            }
+        }
+
+        // Signal 2: Transcript saturation speed
+        let timestamps = timing.partialResultTimestamps
+        if timestamps.count >= 3 {
+            let finalWordCount = timestamps.last?.1 ?? wordCount
+            let quarterIndex   = max(1, timestamps.count / 4)
+            let earlyWordCount = timestamps[quarterIndex - 1].1
+
+            let saturationRatio = Double(earlyWordCount) / Double(max(1, finalWordCount))
+
+            if saturationRatio >= 0.75 {
+                signals += 0.80
+            } else if saturationRatio >= 0.60 {
+                signals += 0.50
+            } else if saturationRatio >= 0.50 {
+                signals += 0.25
+            }
+        }
+
+        // Signal 3: No natural pauses / filler words
         let lower = transcript.lowercased()
+        let fillerWords = ["um", "uh", "hmm", "like", "you know", "so yeah", "anyway"]
+        let hasFillers = fillerWords.contains { lower.contains($0) }
+        if !hasFillers && wordCount > 15 {
+            signals += 0.30
+        }
+
+        let combinedConfidence = min(1.0, signals)
+        let isPreRecorded = combinedConfidence >= 0.70
+
+        return (isPreRecorded, wps, combinedConfidence)
+    }
+
+    // MARK: - Classify
+
+    static func classify(transcript: String, timing: TimingData? = nil) -> Analysis {
+        let lower = transcript.lowercased()
+
+        let preRecordedResult = detectPreRecorded(transcript: transcript, timing: timing)
 
         if lower.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             return Analysis(
-                transcript: "", summary: "Caller left no message — likely a robocall.",
-                classification: "spam", confidence: 0.85, intent: "robocall", keywords: []
+                transcript: "", summary: "Caller left no message -- likely a robocall.",
+                classification: "spam", confidence: 0.85, intent: "robocall", keywords: [],
+                isPreRecorded: false, wordsPerSecond: nil
             )
         }
 
@@ -543,11 +723,18 @@ struct VetoClassifier {
         for s in spamSignals       { if lower.contains(s.pattern) { spamScore += s.weight; matchedSpam.append(s.pattern) } }
         for s in legitimateSignals { if lower.contains(s.pattern) { legitimateScore += s.weight; matchedLegit.append(s.pattern) } }
 
+        // Pre-recorded detection adds a strong spam signal
+        if preRecordedResult.isPreRecorded {
+            spamScore += 1.5 * preRecordedResult.preRecordedConfidence
+            matchedSpam.append("pre-recorded message")
+        }
+
         let intent: String
         if matchedLegit.contains("appointment") || matchedLegit.contains("doctor") { intent = "appointment" }
         else if matchedLegit.contains("delivery") || matchedLegit.contains("package") { intent = "delivery" }
         else if matchedLegit.contains("school") || matchedLegit.contains("teacher") { intent = "school" }
         else if matchedLegit.contains("contractor") || matchedLegit.contains("estimate") { intent = "contractor" }
+        else if preRecordedResult.isPreRecorded { intent = "robocall" }
         else if !matchedSpam.isEmpty { intent = "sales_or_scam" }
         else { intent = "unknown" }
 
@@ -572,22 +759,28 @@ struct VetoClassifier {
 
         let short = String(transcript.prefix(120))
         let summary: String
-        switch classification {
-        case "spam":         summary = "Spam call detected. Caller said: \"\(short)\""
-        case "likely_spam":  summary = "Possible spam call. Caller said: \"\(short)\""
-        case "legitimate":
-            switch intent {
-            case "appointment": summary = "Appointment reminder. Caller said: \"\(short)\""
-            case "delivery":    summary = "Delivery notification. Caller said: \"\(short)\""
-            default:            summary = "Likely legitimate call. Caller said: \"\(short)\""
+        if preRecordedResult.isPreRecorded {
+            summary = "Pre-recorded robocall detected. Message: \"\(short)\""
+        } else {
+            switch classification {
+            case "spam":         summary = "Spam call detected. Caller said: \"\(short)\""
+            case "likely_spam":  summary = "Possible spam call. Caller said: \"\(short)\""
+            case "legitimate":
+                switch intent {
+                case "appointment": summary = "Appointment reminder. Caller said: \"\(short)\""
+                case "delivery":    summary = "Delivery notification. Caller said: \"\(short)\""
+                default:            summary = "Likely legitimate call. Caller said: \"\(short)\""
+                }
+            default: summary = "Unknown caller. Message: \"\(short)\""
             }
-        default: summary = "Unknown caller. Message: \"\(short)\""
         }
 
         return Analysis(
             transcript: transcript, summary: summary, classification: classification,
             confidence: confidence, intent: intent,
-            keywords: Array(Set(matchedSpam + matchedLegit + namedEntities).prefix(10))
+            keywords: Array(Set(matchedSpam + matchedLegit + namedEntities).prefix(10)),
+            isPreRecorded: preRecordedResult.isPreRecorded,
+            wordsPerSecond: preRecordedResult.wordsPerSecond
         )
     }
 }

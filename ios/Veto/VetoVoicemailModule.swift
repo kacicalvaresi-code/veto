@@ -1,6 +1,7 @@
 import Foundation
 import Speech
 import NaturalLanguage
+import AVFoundation
 
 // MARK: - VetoVoicemailModule
 //
@@ -29,19 +30,39 @@ class VetoVoicemailModule: NSObject {
     // MARK: - Storage Keys
     private let screenedCallsKey = "veto_screened_calls"
 
+    // MARK: - Timing Analysis State
+    private var transcriptionStartTime: Date?
+    private var partialResultTimestamps: [(Date, Int)] = []
+
     // MARK: - React Native
     @objc static func requiresMainQueueSetup() -> Bool { false }
+
+    // MARK: - Audio Duration Helper
+
+    private func getAudioDuration(url: URL) -> TimeInterval? {
+        do {
+            let player = try AVAudioPlayer(contentsOf: url)
+            return player.duration
+        } catch {
+            let asset = AVURLAsset(url: url)
+            let duration = CMTimeGetSeconds(asset.duration)
+            return duration > 0 ? duration : nil
+        }
+    }
 
     // MARK: - Transcribe & Classify
     //
     // Transcribes an audio file and classifies the transcript using on-device NLP.
+    // Now includes timing analysis to detect pre-recorded robocall voicemails.
     // Returns a dictionary with:
-    //   transcript     : String
-    //   summary        : String   (one-sentence human-readable summary)
-    //   classification : String   ("spam" | "likely_spam" | "legitimate" | "unknown")
-    //   confidence     : Double   (0.0 – 1.0)
-    //   detectedIntent : String   (e.g. "appointment", "delivery", "sales", "scam")
-    //   keywords       : [String]
+    //   transcript      : String
+    //   summary         : String   (one-sentence human-readable summary)
+    //   classification  : String   ("spam" | "likely_spam" | "legitimate" | "unknown")
+    //   confidence      : Double   (0.0 - 1.0)
+    //   detectedIntent  : String   (e.g. "appointment", "delivery", "robocall", "sales_or_scam")
+    //   keywords        : [String]
+    //   isPreRecorded   : Bool
+    //   wordsPerSecond  : Double
 
     @objc func transcribeAndClassify(
         _ audioFileURL: String,
@@ -68,10 +89,18 @@ class VetoVoicemailModule: NSObject {
             return
         }
 
+        // Get audio duration for words-per-second analysis
+        let audioDuration = getAudioDuration(url: url)
+
+        // Reset timing state
+        transcriptionStartTime = Date()
+        partialResultTimestamps = []
+
         let request = SFSpeechURLRecognitionRequest(url: url)
-        // Force on-device processing — no data leaves the phone
+        // Force on-device processing -- no data leaves the phone
         request.requiresOnDeviceRecognition = true
-        request.shouldReportPartialResults  = false
+        // Enable partial results to measure transcript delivery speed
+        request.shouldReportPartialResults  = true
 
         recognizer.recognitionTask(with: request) { [weak self] result, error in
             guard let self else { return }
@@ -81,19 +110,37 @@ class VetoVoicemailModule: NSObject {
                 return
             }
 
-            guard let result, result.isFinal else { return }
+            guard let result else { return }
 
-            let transcript = result.bestTranscription.formattedString
-            let analysis   = self.classifyTranscript(transcript)
+            let currentText = result.bestTranscription.formattedString
+            let wordCount   = currentText.split(separator: " ").count
 
-            resolver([
-                "transcript"     : transcript,
-                "summary"        : analysis.summary,
-                "classification" : analysis.classification,
-                "confidence"     : analysis.confidence,
-                "detectedIntent" : analysis.detectedIntent,
-                "keywords"       : analysis.keywords,
-            ])
+            // Record timing of each partial result
+            self.partialResultTimestamps.append((Date(), wordCount))
+
+            if result.isFinal {
+                let transcript = currentText
+
+                // Build timing data for pre-recorded detection
+                let timingData = TimingData(
+                    audioDurationSeconds: audioDuration,
+                    transcriptionStartTime: self.transcriptionStartTime ?? Date(),
+                    partialResultTimestamps: self.partialResultTimestamps
+                )
+
+                let analysis = self.classifyTranscript(transcript, timing: timingData)
+
+                resolver([
+                    "transcript"     : transcript,
+                    "summary"        : analysis.summary,
+                    "classification" : analysis.classification,
+                    "confidence"     : analysis.confidence,
+                    "detectedIntent" : analysis.detectedIntent,
+                    "keywords"       : analysis.keywords,
+                    "isPreRecorded"  : analysis.isPreRecorded,
+                    "wordsPerSecond" : analysis.wordsPerSecond ?? 0,
+                ])
+            }
         }
     }
 
@@ -119,9 +166,6 @@ class VetoVoicemailModule: NSObject {
     }
 
     // MARK: - Screened Calls Store
-    //
-    // Screened calls are stored as JSON in the App Group UserDefaults so they
-    // are accessible from both the main app and any future extensions.
 
     @objc func saveScreenedCall(
         _ callData: NSDictionary,
@@ -135,7 +179,6 @@ class VetoVoicemailModule: NSObject {
 
         var calls = defaults.array(forKey: screenedCallsKey) as? [[String: Any]] ?? []
 
-        // Build entry — ensure required fields are present
         var entry = callData as? [String: Any] ?? [:]
         if entry["id"] == nil {
             entry["id"] = UUID().uuidString
@@ -147,8 +190,7 @@ class VetoVoicemailModule: NSObject {
             entry["action"] = "pending"
         }
 
-        calls.insert(entry, at: 0) // newest first
-        // Keep last 100 screened calls
+        calls.insert(entry, at: 0)
         if calls.count > 100 { calls = Array(calls.prefix(100)) }
 
         defaults.set(calls, forKey: screenedCallsKey)
@@ -205,22 +247,120 @@ class VetoVoicemailModule: NSObject {
         resolver(true)
     }
 
-    // MARK: - On-Device NLP Classification
+    // MARK: - Timing Data
+
+    private struct TimingData {
+        let audioDurationSeconds: TimeInterval?
+        let transcriptionStartTime: Date
+        let partialResultTimestamps: [(Date, Int)]
+    }
+
+    // MARK: - On-Device NLP Classification with Timing Analysis
 
     private struct TranscriptAnalysis {
         let summary        : String
-        let classification : String   // "spam" | "likely_spam" | "legitimate" | "unknown"
+        let classification : String
         let confidence     : Double
         let detectedIntent : String
         let keywords       : [String]
+        let isPreRecorded  : Bool
+        let wordsPerSecond : Double?
     }
 
-    private func classifyTranscript(_ transcript: String) -> TranscriptAnalysis {
+    // MARK: - Pre-Recorded Detection
+    //
+    // A pre-recorded robocall voicemail has distinctive timing signatures:
+    //
+    // 1. HIGH WORDS-PER-SECOND RATIO
+    //    Pre-recorded messages are densely packed -- typically 3.0+ words/sec.
+    //    Human callers average 1.5-2.2 words/sec with natural pauses.
+    //
+    // 2. RAPID TRANSCRIPT SATURATION
+    //    Partial results arrive in large chunks for pre-recorded audio because
+    //    there are no natural pauses. Human speech trickles in gradually.
+    //
+    // 3. ABSENCE OF FILLER WORDS
+    //    Pre-recorded messages lack natural speech fillers (um, uh, hmm).
+
+    private func detectPreRecorded(transcript: String, timing: TimingData?) -> (isPreRecorded: Bool, wordsPerSecond: Double?, confidence: Double) {
+        guard let timing else {
+            return (false, nil, 0)
+        }
+
+        let wordCount = transcript.split(separator: " ").count
+        guard wordCount >= 5 else {
+            return (false, nil, 0)
+        }
+
+        var signals = 0.0
+        var wps: Double? = nil
+
+        // Signal 1: Words per second of audio
+        if let duration = timing.audioDurationSeconds, duration > 0 {
+            let wordsPerSec = Double(wordCount) / duration
+            wps = wordsPerSec
+
+            if wordsPerSec >= 3.5 {
+                signals += 0.95
+            } else if wordsPerSec >= 3.0 {
+                signals += 0.75
+            } else if wordsPerSec >= 2.5 {
+                signals += 0.40
+            }
+        }
+
+        // Signal 2: Transcript saturation speed
+        let timestamps = timing.partialResultTimestamps
+        if timestamps.count >= 3 {
+            let finalWordCount = timestamps.last?.1 ?? wordCount
+            let quarterIndex   = max(1, timestamps.count / 4)
+            let earlyWordCount = timestamps[quarterIndex - 1].1
+
+            let saturationRatio = Double(earlyWordCount) / Double(max(1, finalWordCount))
+
+            if saturationRatio >= 0.75 {
+                signals += 0.80
+            } else if saturationRatio >= 0.60 {
+                signals += 0.50
+            } else if saturationRatio >= 0.50 {
+                signals += 0.25
+            }
+        }
+
+        // Signal 3: No natural pauses / filler words
+        let lower = transcript.lowercased()
+        let fillerWords = ["um", "uh", "hmm", "like", "you know", "so yeah", "anyway"]
+        let hasFillers = fillerWords.contains { lower.contains($0) }
+        if !hasFillers && wordCount > 15 {
+            signals += 0.30
+        }
+
+        let combinedConfidence = min(1.0, signals)
+        let isPreRecorded = combinedConfidence >= 0.70
+
+        return (isPreRecorded, wps, combinedConfidence)
+    }
+
+    private func classifyTranscript(_ transcript: String, timing: TimingData? = nil) -> TranscriptAnalysis {
         let lower = transcript.lowercased()
 
-        // ── Keyword signal tables ─────────────────────────────────────────────
+        // Detect pre-recorded pattern
+        let preRecordedResult = detectPreRecorded(transcript: transcript, timing: timing)
 
-        // Strong spam / scam signals
+        // Empty voicemail is a strong spam signal
+        if transcript.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            return TranscriptAnalysis(
+                summary        : "Caller left no message.",
+                classification : "spam",
+                confidence     : 0.85,
+                detectedIntent : "robocall",
+                keywords       : [],
+                isPreRecorded  : false,
+                wordsPerSecond : nil
+            )
+        }
+
+        // Keyword signal tables
         let spamSignals: [(pattern: String, weight: Double)] = [
             ("irs", 0.9), ("tax", 0.6), ("warrant", 0.9), ("arrest", 0.9),
             ("social security", 0.9), ("suspended", 0.8), ("legal action", 0.9),
@@ -236,7 +376,6 @@ class VetoVoicemailModule: NSObject {
             ("reduce your", 0.6), ("lower your", 0.6),
         ]
 
-        // Legitimate caller signals
         let legitimateSignals: [(pattern: String, weight: Double)] = [
             ("doctor", 0.8), ("dr.", 0.8), ("clinic", 0.8), ("hospital", 0.8),
             ("appointment", 0.9), ("prescription", 0.8), ("pharmacy", 0.8),
@@ -249,7 +388,6 @@ class VetoVoicemailModule: NSObject {
             ("neighbor", 0.7), ("calling back", 0.6), ("returning your call", 0.7),
         ]
 
-        // ── Score calculation ─────────────────────────────────────────────────
         var spamScore      = 0.0
         var legitimateScore = 0.0
         var matchedSpam    = [String]()
@@ -268,18 +406,13 @@ class VetoVoicemailModule: NSObject {
             }
         }
 
-        // Empty voicemail is a strong spam signal (robocalls rarely leave messages)
-        if transcript.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-            return TranscriptAnalysis(
-                summary        : "Caller left no message.",
-                classification : "spam",
-                confidence     : 0.85,
-                detectedIntent : "robocall",
-                keywords       : []
-            )
+        // Pre-recorded detection adds a strong spam signal
+        if preRecordedResult.isPreRecorded {
+            spamScore += 1.5 * preRecordedResult.confidence
+            matchedSpam.append("pre-recorded message")
         }
 
-        // ── Determine intent ──────────────────────────────────────────────────
+        // Determine intent
         let intent: String
         if matchedLegit.contains("appointment") || matchedLegit.contains("doctor") {
             intent = "appointment"
@@ -289,13 +422,15 @@ class VetoVoicemailModule: NSObject {
             intent = "school"
         } else if matchedLegit.contains("contractor") || matchedLegit.contains("estimate") {
             intent = "contractor"
+        } else if preRecordedResult.isPreRecorded {
+            intent = "robocall"
         } else if !matchedSpam.isEmpty {
             intent = "sales_or_scam"
         } else {
             intent = "unknown"
         }
 
-        // ── Classification ────────────────────────────────────────────────────
+        // Classification
         let netScore    = spamScore - legitimateScore
         let totalSignal = spamScore + legitimateScore
 
@@ -319,7 +454,7 @@ class VetoVoicemailModule: NSObject {
             confidence     = 0.5
         }
 
-        // ── NaturalLanguage entity extraction for summary ─────────────────────
+        // NaturalLanguage entity extraction
         let tagger = NLTagger(tagSchemes: [.nameType])
         tagger.string = transcript
         var namedEntities = [String]()
@@ -333,24 +468,28 @@ class VetoVoicemailModule: NSObject {
             return true
         }
 
-        // ── Build human-readable summary ──────────────────────────────────────
+        // Build human-readable summary
         let summary: String
         let shortTranscript = transcript.prefix(120)
-        switch classification {
-        case "spam":
-            summary = "Possible spam call. Caller said: \"\(shortTranscript)\""
-        case "likely_spam":
-            summary = "Possibly unwanted call. Caller said: \"\(shortTranscript)\""
-        case "legitimate":
-            if intent == "appointment" {
-                summary = "Possible appointment reminder. Caller said: \"\(shortTranscript)\""
-            } else if intent == "delivery" {
-                summary = "Possible delivery notification. Caller said: \"\(shortTranscript)\""
-            } else {
-                summary = "Likely legitimate call. Caller said: \"\(shortTranscript)\""
+        if preRecordedResult.isPreRecorded {
+            summary = "Pre-recorded robocall detected. Message: \"\(shortTranscript)\""
+        } else {
+            switch classification {
+            case "spam":
+                summary = "Possible spam call. Caller said: \"\(shortTranscript)\""
+            case "likely_spam":
+                summary = "Possibly unwanted call. Caller said: \"\(shortTranscript)\""
+            case "legitimate":
+                if intent == "appointment" {
+                    summary = "Possible appointment reminder. Caller said: \"\(shortTranscript)\""
+                } else if intent == "delivery" {
+                    summary = "Possible delivery notification. Caller said: \"\(shortTranscript)\""
+                } else {
+                    summary = "Likely legitimate call. Caller said: \"\(shortTranscript)\""
+                }
+            default:
+                summary = "Unknown caller. Message: \"\(shortTranscript)\""
             }
-        default:
-            summary = "Unknown caller. Message: \"\(shortTranscript)\""
         }
 
         let allKeywords = Array(Set(matchedSpam + matchedLegit + namedEntities)).prefix(10)
@@ -360,7 +499,9 @@ class VetoVoicemailModule: NSObject {
             classification : classification,
             confidence     : confidence,
             detectedIntent : intent,
-            keywords       : Array(allKeywords)
+            keywords       : Array(allKeywords),
+            isPreRecorded  : preRecordedResult.isPreRecorded,
+            wordsPerSecond : preRecordedResult.wordsPerSecond
         )
     }
 }
