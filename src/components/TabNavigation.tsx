@@ -6,9 +6,10 @@ import ProtectionDashboard from '../screens/ProtectionDashboard';
 import AuditLogScreen from '../screens/AuditLogScreen';
 import SettingsScreen from '../screens/SettingsScreen';
 import ScreenedCallsScreen from '../screens/ScreenedCallsScreen';
+import ScamBaiterScreen from '../screens/ScamBaiterScreen';
 import { getScreenedCalls } from '../modules/VoicemailModule';
 
-type TabName = 'dashboard' | 'screened' | 'audit' | 'settings';
+type TabName = 'dashboard' | 'screened' | 'baiter' | 'audit' | 'settings';
 
 // TabNavigation receives the navigation prop from the Stack.Navigator in App.tsx
 // so sub-screens (BlockedCalls, Stats) can be pushed onto the stack
@@ -44,6 +45,8 @@ export default function TabNavigation({ navigation }: { navigation?: any }) {
                 return <ProtectionDashboard navigation={navigation} />;
             case 'screened':
                 return <ScreenedCallsScreen />;
+            case 'baiter':
+                return <ScamBaiterScreen />;
             case 'audit':
                 return <AuditLogScreen />;
             case 'settings':
@@ -96,6 +99,20 @@ export default function TabNavigation({ navigation }: { navigation?: any }) {
                         activeTab === 'screened' && styles.tabLabelActive,
                     ]}>
                         Screened
+                    </Text>
+                </TouchableOpacity>
+
+                {/* Scam Baiter */}
+                <TouchableOpacity
+                    style={styles.tab}
+                    onPress={() => setActiveTab('baiter')}
+                >
+                    <Text style={styles.tabIcon}>🎭</Text>
+                    <Text style={[
+                        styles.tabLabel,
+                        activeTab === 'baiter' && styles.tabLabelActive,
+                    ]}>
+                        Bait
                     </Text>
                 </TouchableOpacity>
 
