@@ -13,8 +13,13 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { requireNativeModule } from 'expo-modules-core';
 
-// Native module bridge
-const ScamBaiterNative = requireNativeModule('ScamBaiter');
+// Native module bridge — wrapped in try/catch to prevent crash if module not available
+let ScamBaiterNative: any = null;
+try {
+  ScamBaiterNative = requireNativeModule('ScamBaiter');
+} catch (e) {
+  console.warn('ScamBaiter native module not available:', e);
+}
 
 interface Persona {
   id: string;
