@@ -9,6 +9,8 @@ import {
   Linking,
   ActivityIndicator,
   Animated,
+  NativeScrollEvent,
+  NativeSyntheticEvent,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -62,10 +64,39 @@ export default function ScamBaiterScreen() {
   });
   const [callSummary, setCallSummary] = useState<any>(null);
   const pulseAnim = useRef(new Animated.Value(1)).current;
+  const [showScrollArrow, setShowScrollArrow] = useState(true);
+  const scrollRef = useRef<ScrollView>(null);
+  const arrowAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     loadPersonas();
+    // Bounce the scroll arrow to draw attention
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(arrowAnim, {
+          toValue: 10,
+          duration: 600,
+          useNativeDriver: true,
+        }),
+        Animated.timing(arrowAnim, {
+          toValue: 0,
+          duration: 600,
+          useNativeDriver: true,
+        }),
+      ])
+    ).start();
   }, []);
+
+  const handleScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const { contentOffset, contentSize, layoutMeasurement } = event.nativeEvent;
+    const distanceFromBottom = contentSize.height - layoutMeasurement.height - contentOffset.y;
+    // Hide arrow once user has scrolled down enough
+    if (distanceFromBottom < 100) {
+      setShowScrollArrow(false);
+    } else if (contentOffset.y < 50) {
+      setShowScrollArrow(true);
+    }
+  };
 
   useEffect(() => {
     if (baitingState.isActive) {
@@ -187,7 +218,12 @@ export default function ScamBaiterScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <ScrollView contentContainerStyle={styles.scrollContent}>
+      <ScrollView
+        ref={scrollRef}
+        contentContainerStyle={styles.scrollContent}
+        onScroll={handleScroll}
+        scrollEventThrottle={16}
+      >
         {/* Header */}
         <View style={styles.header}>
           <Text style={styles.headerTitle}>Scam Baiter</Text>
@@ -418,6 +454,20 @@ export default function ScamBaiterScreen() {
           </View>
         )}
       </ScrollView>
+
+      {/* Scroll down arrow indicator */}
+      {showScrollArrow && (
+        <Animated.View
+          style={[
+            styles.scrollArrowContainer,
+            { transform: [{ translateY: arrowAnim }] },
+          ]}
+          pointerEvents="none"
+        >
+          <Text style={styles.scrollArrowText}>Scroll down</Text>
+          <Text style={styles.scrollArrow}>▼</Text>
+        </Animated.View>
+      )}
     </SafeAreaView>
   );
 }
@@ -770,6 +820,27 @@ const styles = StyleSheet.create({
   summaryValueHighlight: {
     fontSize: 14,
     fontWeight: '700',
+    color: '#00D4AA',
+  },
+  scrollArrowContainer: {
+    position: 'absolute',
+    bottom: 16,
+    alignSelf: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(28, 28, 30, 0.85)',
+    borderRadius: 20,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.15)',
+  },
+  scrollArrowText: {
+    fontSize: 12,
+    color: '#8E8E93',
+    marginBottom: 2,
+  },
+  scrollArrow: {
+    fontSize: 14,
     color: '#00D4AA',
   },
 });

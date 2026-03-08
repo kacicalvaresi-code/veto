@@ -72,9 +72,21 @@ export default function SilenceUnknownCallersScreen({ onNext }: SilenceUnknownCa
                         </View>
                     )}
 
-                    <Text style={styles.instruction}>
-                        Enable this in <Text style={styles.bold}>Settings → Phone → Screen Unknown Callers</Text>
-                    </Text>
+                    {/* Next Step instruction */}
+                    <View style={styles.nextStepCard}>
+                        <Text style={styles.nextStepTitle}>Next Step:</Text>
+                        {mode === 'ask' ? (
+                            <Text style={styles.nextStepText}>
+                                Tap <Text style={styles.bold}>"Open Phone Settings"</Text> below, then select{' '}
+                                <Text style={styles.bold}>"Ask Reason for Calling"</Text> and come back here.
+                            </Text>
+                        ) : (
+                            <Text style={styles.nextStepText}>
+                                Tap <Text style={styles.bold}>"Open Phone Settings"</Text> below, then select{' '}
+                                <Text style={styles.bold}>"Silence"</Text> and come back here.
+                            </Text>
+                        )}
+                    </View>
                 </View>
 
                 {/* Actions — always visible at the bottom */}
@@ -124,7 +136,7 @@ const styles = StyleSheet.create({
         backgroundColor: 'rgba(28, 28, 30, 0.6)',
         borderRadius: 10,
         padding: 4,
-        marginBottom: 20,
+        marginBottom: 16,
         borderWidth: 1,
         borderColor: 'rgba(255,255,255,0.12)',
     },
@@ -156,7 +168,7 @@ const styles = StyleSheet.create({
         padding: 14,
         borderWidth: 1,
         borderColor: 'rgba(74, 144, 226, 0.3)',
-        marginBottom: 16,
+        marginBottom: 12,
         alignItems: 'flex-start',
     },
     noteIcon: {
@@ -170,11 +182,23 @@ const styles = StyleSheet.create({
         color: 'rgba(255,255,255,0.85)',
         lineHeight: 20,
     },
-    instruction: {
+    nextStepCard: {
+        backgroundColor: 'rgba(0, 210, 255, 0.1)',
+        borderRadius: 10,
+        padding: 14,
+        borderWidth: 1,
+        borderColor: 'rgba(0, 210, 255, 0.3)',
+    },
+    nextStepTitle: {
         fontSize: 14,
-        color: 'rgba(255,255,255,0.6)',
+        fontWeight: '700',
+        color: '#00D2FF',
+        marginBottom: 6,
+    },
+    nextStepText: {
+        fontSize: 14,
+        color: 'rgba(255,255,255,0.85)',
         lineHeight: 20,
-        textAlign: 'center',
     },
     actions: {
         paddingBottom: 32,

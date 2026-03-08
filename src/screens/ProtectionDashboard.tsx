@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Animated, Alert, Linking } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Animated, Alert, TextInput, Modal, KeyboardAvoidingView, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import PulsingShield from '../components/PulsingShield';
 import GlassCard from '../components/GlassCard';
 import GradientButton from '../components/GradientButton';
 import MetricsModule from '../modules/MetricsModule';
+import { addBlockedNumber } from '../services/database';
 
 // Accept optional navigation and onSwitchTab callback
 interface ProtectionDashboardProps {
@@ -16,6 +17,8 @@ export default function ProtectionDashboard({ navigation, onSwitchTab }: Protect
     const [isActive, setIsActive] = useState(true);
     const [callsBlocked, setCallsBlocked] = useState(0);
     const [textsFiltered, setTextsFiltered] = useState(0);
+    const [showReportModal, setShowReportModal] = useState(false);
+    const [reportNumber, setReportNumber] = useState('');
     const fadeAnim = new Animated.Value(0);
 
     useEffect(() => {
@@ -42,21 +45,43 @@ export default function ProtectionDashboard({ navigation, onSwitchTab }: Protect
     };
 
     const handleReportNow = () => {
-        Alert.alert(
-            'Report a Spam Number',
-            'Enter the spam phone number you want to report.',
-            [
-                { text: 'Cancel', style: 'cancel' },
-                {
-                    text: 'Report via Email',
-                    onPress: () => {
-                        Linking.openURL(
-                            'mailto:support@vetospam.app?subject=Spam%20Number%20Report&body=Phone%20number:%20%0ADetails:%20'
-                        );
-                    },
-                },
-            ]
-        );
+        setReportNumber('');
+        setShowReportModal(true);
+    };
+
+    const handleSubmitReport = () => {
+        // Strip non-digits
+        const digits = reportNumber.replace(/\D/g, '');
+        if (digits.length < 7) {
+            Alert.alert('Invalid Number', 'Please enter a valid phone number with at least 7 digits.');
+            return;
+        }
+        // Add to local blocklist
+        const success = addBlockedNumber(digits, 'Reported Spam');
+        setShowReportModal(false);
+        if (success) {
+            Alert.alert(
+                'Number Reported',
+                `${formatDisplay(digits)} has been added to your local blocklist. Future calls from this number will be blocked.`,
+                [{ text: 'OK' }]
+            );
+        } else {
+            Alert.alert(
+                'Already Blocked',
+                `${formatDisplay(digits)} is already in your blocklist.`,
+                [{ text: 'OK' }]
+            );
+        }
+    };
+
+    const formatDisplay = (digits: string): string => {
+        if (digits.length === 10) {
+            return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`;
+        }
+        if (digits.length === 11 && digits[0] === '1') {
+            return `+1 (${digits.slice(1, 4)}) ${digits.slice(4, 7)}-${digits.slice(7)}`;
+        }
+        return digits;
     };
 
     const handleViewAuditLog = () => {
@@ -132,6 +157,53 @@ export default function ProtectionDashboard({ navigation, onSwitchTab }: Protect
                     icon="+"
                 />
             </View>
+
+            {/* Report Number Modal */}
+            <Modal
+                visible={showReportModal}
+                transparent
+                animationType="fade"
+                onRequestClose={() => setShowReportModal(false)}
+            >
+                <KeyboardAvoidingView
+                    behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                    style={styles.modalOverlay}
+                >
+                    <View style={styles.modalContent}>
+                        <Text style={styles.modalTitle}>Report a Spam Number</Text>
+                        <Text style={styles.modalSubtitle}>
+                            Enter the phone number to add to your local blocklist.
+                        </Text>
+                        <TextInput
+                            style={styles.phoneInput}
+                            placeholder="(555) 123-4567"
+                            placeholderTextColor="#636366"
+                            keyboardType="phone-pad"
+                            value={reportNumber}
+                            onChangeText={setReportNumber}
+                            autoFocus
+                        />
+                        <View style={styles.modalActions}>
+                            <TouchableOpacity
+                                style={styles.modalCancelBtn}
+                                onPress={() => setShowReportModal(false)}
+                            >
+                                <Text style={styles.modalCancelText}>Cancel</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                                style={[
+                                    styles.modalSubmitBtn,
+                                    reportNumber.replace(/\D/g, '').length < 7 && styles.modalSubmitDisabled,
+                                ]}
+                                onPress={handleSubmitReport}
+                                disabled={reportNumber.replace(/\D/g, '').length < 7}
+                            >
+                                <Text style={styles.modalSubmitText}>Block Number</Text>
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                </KeyboardAvoidingView>
+            </Modal>
         </SafeAreaView>
     );
 }
@@ -187,5 +259,74 @@ const styles = StyleSheet.create({
     buttonContainer: {
         paddingHorizontal: 32,
         paddingBottom: 32,
+    },
+    // Modal styles
+    modalOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0,0,0,0.7)',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    modalContent: {
+        backgroundColor: '#1C1C1E',
+        borderRadius: 20,
+        padding: 24,
+        width: '85%',
+        maxWidth: 340,
+    },
+    modalTitle: {
+        fontSize: 20,
+        fontWeight: '700',
+        color: '#FFFFFF',
+        textAlign: 'center',
+        marginBottom: 8,
+    },
+    modalSubtitle: {
+        fontSize: 14,
+        color: '#8E8E93',
+        textAlign: 'center',
+        marginBottom: 20,
+    },
+    phoneInput: {
+        backgroundColor: '#2C2C2E',
+        borderRadius: 12,
+        paddingHorizontal: 16,
+        paddingVertical: 14,
+        fontSize: 18,
+        color: '#FFFFFF',
+        textAlign: 'center',
+        letterSpacing: 1,
+        marginBottom: 20,
+    },
+    modalActions: {
+        flexDirection: 'row',
+        gap: 12,
+    },
+    modalCancelBtn: {
+        flex: 1,
+        backgroundColor: '#2C2C2E',
+        borderRadius: 12,
+        paddingVertical: 14,
+        alignItems: 'center',
+    },
+    modalCancelText: {
+        fontSize: 16,
+        fontWeight: '600',
+        color: '#8E8E93',
+    },
+    modalSubmitBtn: {
+        flex: 1,
+        backgroundColor: '#FF3B30',
+        borderRadius: 12,
+        paddingVertical: 14,
+        alignItems: 'center',
+    },
+    modalSubmitDisabled: {
+        opacity: 0.4,
+    },
+    modalSubmitText: {
+        fontSize: 16,
+        fontWeight: '600',
+        color: '#FFFFFF',
     },
 });
