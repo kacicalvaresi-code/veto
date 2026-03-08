@@ -432,7 +432,7 @@ FF000001000000000000FF08 /* ScamBaiterModule.swift in Sources */,
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
-				CURRENT_PROJECT_VERSION = 11;
+				CURRENT_PROJECT_VERSION = 12;
 				ENABLE_BITCODE = NO;
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"$(inherited)",
@@ -464,7 +464,7 @@ FF000001000000000000FF08 /* ScamBaiterModule.swift in Sources */,
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
-				CURRENT_PROJECT_VERSION = 11;
+				CURRENT_PROJECT_VERSION = 12;
 				INFOPLIST_FILE = Veto/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 13.4;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
@@ -596,7 +596,7 @@ FF000001000000000000FF08 /* ScamBaiterModule.swift in Sources */,
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_ENTITLEMENTS = CallDirectoryHandler/CallDirectoryHandler.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 11;
+				CURRENT_PROJECT_VERSION = 12;
 				DEVELOPMENT_TEAM = 3D2Y23S825;
 				INFOPLIST_FILE = CallDirectoryHandler/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 13.4;
@@ -617,7 +617,7 @@ FF000001000000000000FF08 /* ScamBaiterModule.swift in Sources */,
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_ENTITLEMENTS = CallDirectoryHandler/CallDirectoryHandler.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 11;
+				CURRENT_PROJECT_VERSION = 12;
 				DEVELOPMENT_TEAM = 3D2Y23S825;
 				INFOPLIST_FILE = CallDirectoryHandler/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 13.4;

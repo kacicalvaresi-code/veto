@@ -33,7 +33,7 @@
       </dict>
     </array>
     <key>CFBundleVersion</key>
-    <string>11</string>
+    <string>12</string>
     <key>ITSAppUsesNonExemptEncryption</key>
     <false/>
     <key>LSRequiresIPhoneOS</key>
@@ -45,8 +45,6 @@
       <key>NSAllowsLocalNetworking</key>
       <true/>
     </dict>
-    <key>NSUserTrackingUsageDescription</key>
-    <string>This app does not track you. This permission is not used.</string>
     <key>NSSpeechRecognitionUsageDescription</key>
     <string>Veto uses on-device speech recognition to transcribe voicemails from unknown callers. All transcription happens entirely on your device — no audio or text is ever sent to any server.</string>
     <key>NSMicrophoneUsageDescription</key>
