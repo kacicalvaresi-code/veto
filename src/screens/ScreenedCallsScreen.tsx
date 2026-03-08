@@ -1,7 +1,7 @@
 /**
  * ScreenedCallsScreen.tsx
  *
- * The "Smart Voicemail Screening" inbox — Phase 2 Option 1.
+ * The "Smart Voicemail Screening" inbox.
  *
  * Displays calls from unknown numbers that were sent to voicemail and
  * analysed on-device by VetoVoicemailModule.  Each card shows:
@@ -22,12 +22,12 @@ import {
     Text,
     StyleSheet,
     FlatList,
+    ScrollView,
     TouchableOpacity,
     Alert,
     Linking,
     ActivityIndicator,
     RefreshControl,
-    Animated,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
@@ -200,8 +200,13 @@ export default function ScreenedCallsScreen() {
     const [refreshing, setRefreshing] = useState(false);
 
     const loadCalls = useCallback(async () => {
-        const data = await getScreenedCalls();
-        setCalls(data);
+        try {
+            const data = await getScreenedCalls();
+            setCalls(data);
+        } catch (e) {
+            // Module may not be available
+            setCalls([]);
+        }
         setLoading(false);
         setRefreshing(false);
     }, []);
@@ -214,7 +219,6 @@ export default function ScreenedCallsScreen() {
         phoneNumber : string
     ) => {
         if (action === 'called_back') {
-            // Initiate the call back via the system dialler
             const tel = `tel:${phoneNumber}`;
             const canCall = await Linking.canOpenURL(tel);
             if (canCall) {
@@ -305,24 +309,28 @@ export default function ScreenedCallsScreen() {
                 )}
             </View>
 
-            {/* ── How it works banner (shown when empty) ─────────────────────── */}
+            {/* ── Empty state (scrollable) ──────────────────────────────────── */}
             {calls.length === 0 && (
-                <View style={styles.emptyContainer}>
-                    <Text style={styles.emptyIcon}>🛡️</Text>
-                    <Text style={styles.emptyTitle}>Smart Voicemail Screening Active</Text>
-                    <Text style={styles.emptyBody}>
-                        When an unknown caller leaves a voicemail, Veto will transcribe and
-                        analyse it on your device using AI. You'll see a summary here so you
-                        can decide whether to call back — without ever being interrupted by
-                        the original call.
-                    </Text>
-                    <View style={styles.emptySteps}>
-                        <Text style={styles.emptyStep}>1. Enable "Screen Unknown Callers → Silence" in iOS Settings → Phone</Text>
-                        <Text style={styles.emptyStep}>2. Unknown callers go straight to voicemail</Text>
-                        <Text style={styles.emptyStep}>3. Veto analyses the message on-device</Text>
-                        <Text style={styles.emptyStep}>4. You see a summary and decide what to do</Text>
+                <ScrollView
+                    contentContainerStyle={styles.emptyScrollContent}
+                    showsVerticalScrollIndicator={false}
+                >
+                    <View style={styles.emptyContainer}>
+                        <Text style={styles.emptyIcon}>🛡️</Text>
+                        <Text style={styles.emptyTitle}>Smart Voicemail Screening Active</Text>
+                        <Text style={styles.emptyBody}>
+                            When an unknown caller leaves a voicemail, Veto will transcribe and
+                            analyse it on your device using AI. You'll see a summary here so you
+                            can decide whether to call back.
+                        </Text>
+                        <View style={styles.emptySteps}>
+                            <Text style={styles.emptyStep}>1. Enable "Screen Unknown Callers" in iOS Settings → Phone</Text>
+                            <Text style={styles.emptyStep}>2. Unknown callers go straight to voicemail</Text>
+                            <Text style={styles.emptyStep}>3. Veto analyses the message on-device</Text>
+                            <Text style={styles.emptyStep}>4. You see a summary and decide what to do</Text>
+                        </View>
                     </View>
-                </View>
+                </ScrollView>
             )}
 
             {/* ── Call list ─────────────────────────────────────────────────── */}
@@ -541,8 +549,11 @@ const styles = StyleSheet.create({
     },
 
     // ── Empty state ───────────────────────────────────────────────────────────
+    emptyScrollContent: {
+        flexGrow: 1,
+        paddingBottom: 40,
+    },
     emptyContainer: {
-        flex: 1,
         paddingHorizontal: 28,
         paddingTop: 20,
         alignItems: 'center',

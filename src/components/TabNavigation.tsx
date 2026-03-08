@@ -19,9 +19,13 @@ export default function TabNavigation({ navigation }: { navigation?: any }) {
 
     // Poll for pending screened calls whenever the app comes to the foreground
     const refreshPendingCount = useCallback(async () => {
-        const calls = await getScreenedCalls();
-        const count = calls.filter(c => c.action === 'pending').length;
-        setPendingCount(count);
+        try {
+            const calls = await getScreenedCalls();
+            const count = calls.filter(c => c.action === 'pending').length;
+            setPendingCount(count);
+        } catch (e) {
+            // Module may not be available
+        }
     }, []);
 
     useEffect(() => {
@@ -39,10 +43,15 @@ export default function TabNavigation({ navigation }: { navigation?: any }) {
         }
     }, [activeTab, refreshPendingCount]);
 
+    // Callback for child screens to switch tabs programmatically
+    const handleSwitchTab = useCallback((tab: string) => {
+        setActiveTab(tab as TabName);
+    }, []);
+
     const renderScreen = () => {
         switch (activeTab) {
             case 'dashboard':
-                return <ProtectionDashboard navigation={navigation} />;
+                return <ProtectionDashboard navigation={navigation} onSwitchTab={handleSwitchTab} />;
             case 'screened':
                 return <ScreenedCallsScreen />;
             case 'baiter':
@@ -52,7 +61,7 @@ export default function TabNavigation({ navigation }: { navigation?: any }) {
             case 'settings':
                 return <SettingsScreen navigation={navigation} />;
             default:
-                return <ProtectionDashboard navigation={navigation} />;
+                return <ProtectionDashboard navigation={navigation} onSwitchTab={handleSwitchTab} />;
         }
     };
 

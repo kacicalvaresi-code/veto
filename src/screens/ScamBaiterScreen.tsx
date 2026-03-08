@@ -11,11 +11,11 @@ import {
   Animated,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { requireNativeModule } from 'expo-modules-core';
 
 // Native module bridge — wrapped in try/catch to prevent crash if module not available
 let ScamBaiterNative: any = null;
 try {
+  const { requireNativeModule } = require('expo-modules-core');
   ScamBaiterNative = requireNativeModule('ScamBaiter');
 } catch (e) {
   console.warn('ScamBaiter native module not available:', e);
@@ -37,8 +37,16 @@ interface BaitingState {
   baiterLines: string[];
 }
 
+// Fallback personas when native module is not available
+const FALLBACK_PERSONAS: Persona[] = [
+  { id: 'grandma', name: 'Confused Grandma', description: 'A sweet elderly woman who can never quite find her reading glasses.', emoji: '👵' },
+  { id: 'grandpa', name: 'Hard-of-Hearing Grandpa', description: 'A friendly old man who keeps asking you to speak up.', emoji: '👴' },
+  { id: 'child', name: 'Curious Child', description: 'A young kid who asks endless questions about everything.', emoji: '👦' },
+  { id: 'parent', name: 'Distracted Parent', description: 'A frazzled parent constantly interrupted by kids and chaos.', emoji: '🧑‍🍳' },
+];
+
 export default function ScamBaiterScreen() {
-  const [personas, setPersonas] = useState<Persona[]>([]);
+  const [personas, setPersonas] = useState<Persona[]>(FALLBACK_PERSONAS);
   const [selectedPersona, setSelectedPersona] = useState<string>('grandma');
   const [activeTab, setActiveTab] = useState<'greeting' | 'baiter'>('greeting');
   const [isGenerating, setIsGenerating] = useState(false);
@@ -85,22 +93,33 @@ export default function ScamBaiterScreen() {
   };
 
   const loadPersonas = async () => {
+    if (!ScamBaiterNative) {
+      setPersonas(FALLBACK_PERSONAS);
+      return;
+    }
     try {
       const list = ScamBaiterNative.getPersonas();
-      setPersonas(list);
+      if (list && list.length > 0) {
+        setPersonas(list);
+      }
     } catch (e) {
-      console.error('Failed to load personas:', e);
-      // Fallback personas if native module not available
-      setPersonas([
-        { id: 'grandma', name: 'Confused Grandma', description: 'A sweet elderly woman who can never quite find her reading glasses.', emoji: '👵' },
-        { id: 'grandpa', name: 'Hard-of-Hearing Grandpa', description: 'A friendly old man who keeps asking you to speak up.', emoji: '👴' },
-        { id: 'child', name: 'Curious Child', description: 'A young kid who asks endless questions about everything.', emoji: '👦' },
-        { id: 'parent', name: 'Distracted Parent', description: 'A frazzled parent constantly interrupted by kids and chaos.', emoji: '🧑‍🍳' },
-      ]);
+      console.warn('Failed to load personas from native, using fallback:', e);
+      setPersonas(FALLBACK_PERSONAS);
     }
   };
 
   const generateGreeting = async () => {
+    if (!ScamBaiterNative || !ScamBaiterNative.generateGreeting) {
+      // Show a helpful message when native module isn't available
+      const persona = getPersonaById(selectedPersona);
+      Alert.alert(
+        'Greeting Preview',
+        `Your ${persona?.name || 'persona'} voicemail greeting will be generated on-device using AI text-to-speech.\n\nTo set it as your voicemail:\n1. Open the Phone app\n2. Go to Voicemail tab\n3. Tap "Greeting" in the top-left\n4. Tap "Custom" to record\n\nThe on-device greeting generator requires the full native build. This feature will be fully functional once the app is installed from TestFlight.`,
+        [{ text: 'Got It' }]
+      );
+      return;
+    }
+
     setIsGenerating(true);
     setGreetingReady(false);
     try {
@@ -109,7 +128,7 @@ export default function ScamBaiterScreen() {
       setGreetingReady(true);
       Alert.alert(
         'Greeting Ready!',
-        `Your ${result.persona} voicemail greeting has been generated. To use it:\n\n1. Open the Phone app\n2. Go to Voicemail tab\n3. Tap "Greeting" in the top-left\n4. Tap "Custom"\n5. Record over it by playing this greeting near your phone\n\nThe greeting file is saved and ready to play.`,
+        `Your ${result.persona} voicemail greeting has been generated.\n\nTo use it:\n1. Open the Phone app\n2. Go to Voicemail tab\n3. Tap "Greeting" in the top-left\n4. Tap "Custom"\n5. Record over it by playing this greeting near your phone`,
         [{ text: 'Got It' }]
       );
     } catch (e: any) {
@@ -120,6 +139,15 @@ export default function ScamBaiterScreen() {
   };
 
   const startBaiting = async () => {
+    if (!ScamBaiterNative || !ScamBaiterNative.startBaiting) {
+      Alert.alert(
+        'Call-Back Baiter',
+        'The live call-back baiter uses on-device speech recognition and text-to-speech to have a real-time conversation with scammers.\n\nThis feature requires microphone and speech recognition permissions and works best when installed from TestFlight.',
+        [{ text: 'OK' }]
+      );
+      return;
+    }
+
     setCallSummary(null);
     try {
       await ScamBaiterNative.startBaiting(selectedPersona);
@@ -137,6 +165,11 @@ export default function ScamBaiterScreen() {
   };
 
   const stopBaiting = async () => {
+    if (!ScamBaiterNative || !ScamBaiterNative.stopBaiting) {
+      setBaitingState(prev => ({ ...prev, isActive: false, currentState: 'idle' }));
+      return;
+    }
+
     try {
       const summary = ScamBaiterNative.stopBaiting();
       setBaitingState(prev => ({ ...prev, isActive: false, currentState: 'idle' }));

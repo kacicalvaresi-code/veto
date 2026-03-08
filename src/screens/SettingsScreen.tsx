@@ -21,7 +21,7 @@ import {
     type SpamSyncResult,
 } from '../services/spamSync';
 
-export default function SettingsScreen() {
+export default function SettingsScreen({ navigation }: { navigation?: any } = {}) {
     const [anonymousReporting, setAnonymousReporting] = useState(true);
     const [isSyncing, setIsSyncing]                   = useState(false);
     const [syncInfo, setSyncInfo]                     = useState<{

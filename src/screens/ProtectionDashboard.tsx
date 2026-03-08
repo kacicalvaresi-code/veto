@@ -1,62 +1,67 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Animated } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Animated, Alert, Linking } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import PulsingShield from '../components/PulsingShield';
 import GlassCard from '../components/GlassCard';
 import GradientButton from '../components/GradientButton';
-import { getBlocklist } from '../services/database';
 import MetricsModule from '../modules/MetricsModule';
-import { addAuditLogEntry } from '../services/auditLog';
 
-// Accept optional navigation prop so the Audit Log link and Report button can navigate
-export default function ProtectionDashboard({ navigation }: { navigation?: any }) {
+// Accept optional navigation and onSwitchTab callback
+interface ProtectionDashboardProps {
+    navigation?: any;
+    onSwitchTab?: (tab: string) => void;
+}
+
+export default function ProtectionDashboard({ navigation, onSwitchTab }: ProtectionDashboardProps) {
     const [isActive, setIsActive] = useState(true);
     const [callsBlocked, setCallsBlocked] = useState(0);
     const [textsFiltered, setTextsFiltered] = useState(0);
     const fadeAnim = new Animated.Value(0);
 
     useEffect(() => {
-        // Load metrics from native module
         loadMetrics();
 
-        // Fade in animation
         Animated.timing(fadeAnim, {
             toValue: 1,
             duration: 500,
             useNativeDriver: true,
         }).start();
 
-        // Refresh metrics every 5 seconds
         const interval = setInterval(loadMetrics, 5000);
         return () => clearInterval(interval);
     }, []);
 
     const loadMetrics = async () => {
-        const metrics = await MetricsModule.getMetrics();
-        setCallsBlocked(metrics.callsBlocked);
-        setTextsFiltered(metrics.textsFiltered);
-    };
-
-    const handleReportNow = async () => {
-        // Add a test entry using native module
-        const success = await MetricsModule.addAuditLogEntry({
-            phoneNumber: '+15555551234',
-            type: 'call',
-            action: 'reported',
-            label: 'Manual Report',
-        });
-        if (success) {
-            console.log('Report submitted successfully');
-            loadMetrics(); // Refresh metrics
+        try {
+            const metrics = await MetricsModule.getMetrics();
+            setCallsBlocked(metrics.callsBlocked);
+            setTextsFiltered(metrics.textsFiltered);
+        } catch (e) {
+            // Native module may not be available — keep defaults
         }
     };
 
+    const handleReportNow = () => {
+        Alert.alert(
+            'Report a Spam Number',
+            'Enter the spam phone number you want to report.',
+            [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                    text: 'Report via Email',
+                    onPress: () => {
+                        Linking.openURL(
+                            'mailto:support@vetospam.app?subject=Spam%20Number%20Report&body=Phone%20number:%20%0ADetails:%20'
+                        );
+                    },
+                },
+            ]
+        );
+    };
+
     const handleViewAuditLog = () => {
-        // The AuditLog is a tab in TabNavigation — switching tabs is handled by
-        // the parent TabNavigation component. If a navigation prop is available
-        // (e.g. from a stack screen), navigate there directly.
-        if (navigation) {
-            navigation.navigate('AuditLog');
+        if (onSwitchTab) {
+            onSwitchTab('audit');
         }
     };
 
@@ -109,7 +114,7 @@ export default function ProtectionDashboard({ navigation }: { navigation?: any }
                     </View>
 
                     <TouchableOpacity onPress={handleViewAuditLog} style={styles.auditLink}>
-                        <Text style={[styles.auditLinkText, navigation && styles.auditLinkActive]}>
+                        <Text style={styles.auditLinkText}>
                             View Local Audit Log →
                         </Text>
                     </TouchableOpacity>
@@ -174,9 +179,6 @@ const styles = StyleSheet.create({
     },
     auditLinkText: {
         fontSize: 14,
-        color: '#636366',
-    },
-    auditLinkActive: {
         color: '#007AFF',
     },
     spacer: {
